@@ -1,0 +1,61 @@
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Build outputs
+build/
+dist/
+*.pyc
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Dependencies
+node_modules/
+venv/
+env/
+ENV/
+.venv
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# BMAD output (keep planning artifacts)
+# _bmad-output/planning-artifacts/ is tracked
+_bmad-output/*.md
+_bmad-output/*.yaml
+!_bmad-output/planning-artifacts/
+!_bmad-output/planning-artifacts/**/*
+
+# Python specific
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Agent service specific
+*.db
+*.sqlite
+*.sqlite3

@@ -1,0 +1,13 @@
+installation:
+  version: 6.0.0-alpha.23
+  installDate: 2026-02-06T21:17:00.000Z
+  lastUpdated: 2026-02-06T21:17:00.000Z
+modules:
+  - core
+  - bmb
+  - bmm
+  - cis
+ides:
+  - cursor
+  - antigravity
+  - opencode

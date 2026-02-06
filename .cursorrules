@@ -1,0 +1,40 @@
+# BMAD Project Rules for Cursor
+
+## Project Context
+This is a tool compliance scanning agent service project using BMAD (BMad Method Agile-AI Driven-Development) methodology.
+
+## BMAD Configuration
+- BMAD Version: 6.0.0-alpha.23
+- Modules Installed: Core, BMB, BMM, CIS
+- Project Root: Current directory
+- Output Directory: `_bmad-output/`
+- Documentation: `docs/`
+
+## Development Guidelines
+
+### BMAD Workflows
+When working on this project, consider using BMAD workflows:
+
+1. **Analysis Phase**: Use product brief and research workflows
+2. **Planning Phase**: Use UX design and PRD workflows  
+3. **Solution Phase**: Use architecture creation workflows
+4. **Implementation Phase**: Use story development, code review workflows
+
+### Project Structure
+- `_bmad/` - BMAD core files and modules
+- `_bmad-output/` - BMAD output files
+- `docs/` - Project documentation
+- All planning artifacts are tracked in Git
+
+### Communication
+- Use Chinese (Simplified) for communication and documentation
+- Follow BMAD methodology for structured development
+
+### Code Quality
+- Follow BMAD code review workflows
+- Maintain comprehensive test coverage
+- Use ATDD (Acceptance Test Driven Development) when appropriate
+
+## BMAD Commands
+- `/bmad-master` - Start BMAD Master Agent
+- Use BMAD workflows through Cursor commands as configured
