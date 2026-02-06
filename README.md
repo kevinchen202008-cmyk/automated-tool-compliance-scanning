@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 工具合规扫描 Agent 服务
 
 基于BMAD方法论开发的工具合规扫描agent服务。
@@ -64,3 +65,7 @@
 ## 许可证
 
 （待添加）
+=======
+# automated-tool-compliance-scanning
+基于BMAD方法论开发自动化工具合规扫描服务Agent，并提供工具使用方法
+>>>>>>> 83f339b80b6c26aaea2a477998584a9ea3343bd2
