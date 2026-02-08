@@ -10,31 +10,65 @@
 Thumbs.db
 desktop.ini
 
-# Build outputs
-build/
-dist/
-*.pyc
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Dependencies
-node_modules/
+# Virtual Environment
 venv/
 env/
 ENV/
 .venv
+env.bak/
+venv.bak/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
 
 # Logs
 *.log
 logs/
+*.log.*
 
 # Environment
 .env
 .env.local
 .env.*.local
+
+# Configuration files (contain sensitive information)
+config/config.yaml
+config/config.local.yaml
+*.secret.yaml
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+data/*.db
+data/*.sqlite
 
 # Temporary files
 tmp/
@@ -48,14 +82,11 @@ _bmad-output/*.yaml
 !_bmad-output/planning-artifacts/
 !_bmad-output/planning-artifacts/**/*
 
-# Python specific
-*.egg-info/
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
+# Configuration files
+docs/config-example.yaml
+docs/config-guide.md
 
-# Agent service specific
-*.db
-*.sqlite
-*.sqlite3
+# Reports
+reports/
+*.pdf
+*.html
