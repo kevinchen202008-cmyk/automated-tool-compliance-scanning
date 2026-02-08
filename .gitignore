@@ -90,3 +90,4 @@ docs/config-guide.md
 reports/
 *.pdf
 *.html
+!src/static/*.html

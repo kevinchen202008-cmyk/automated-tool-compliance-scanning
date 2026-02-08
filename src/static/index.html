@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>工具合规扫描 Agent</title>
+  <style>
+    :root { --bg: #0f1419; --card: #1a2332; --text: #e6edf3; --muted: #8b949e; --accent: #58a6ff; --success: #3fb950; --border: #30363d; }
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 24px; min-height: 100vh; }
+    .container { max-width: 720px; margin: 0 auto; }
+    h1 { font-size: 1.5rem; margin-bottom: 8px; }
+    .sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 24px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+    label { display: block; margin-bottom: 6px; color: var(--muted); font-size: 0.85rem; }
+    textarea { width: 100%; min-height: 100px; padding: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; resize: vertical; }
+    .btn { display: inline-block; padding: 10px 18px; background: var(--accent); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; margin-right: 8px; margin-top: 8px; }
+    .btn:hover { opacity: 0.9; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .links { margin-top: 24px; }
+    .links a { color: var(--accent); text-decoration: none; margin-right: 16px; }
+    .links a:hover { text-decoration: underline; }
+    #log { margin-top: 16px; font-family: ui-monospace, monospace; font-size: 13px; white-space: pre-wrap; word-break: break-all; color: var(--muted); max-height: 300px; overflow-y: auto; }
+    .status { padding: 8px 12px; border-radius: 8px; margin: 4px 0; font-size: 13px; }
+    .status.pending { background: rgba(88,166,255,0.15); border: 1px solid var(--accent); }
+    .status.done { background: rgba(63,185,80,0.15); border: 1px solid var(--success); }
+    .status.error { background: rgba(248,81,73,0.15); border: 1px solid #f85149; }
+    .report-link { margin-top: 8px; }
+    .report-link a { color: var(--success); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>工具合规扫描 Agent</h1>
+    <p class="sub">输入工具名称（每行一个或逗号分隔），创建工具并启动合规扫描。本页面直接调用本地 API，无需授权头。</p>
+
+    <div class="card">
+      <label for="tools">工具名称</label>
+      <textarea id="tools" placeholder="例如：&#10;Docker Desktop&#10;Git&#10;VS Code"></textarea>
+      <button class="btn" id="startBtn">创建工具并开始扫描</button>
+    </div>
+
+    <div class="card" id="resultCard" style="display: none;">
+      <strong>扫描任务</strong>
+      <div id="taskList"></div>
+      <div id="log"></div>
+    </div>
+
+    <div class="links">
+      <a href="/docs">API 文档</a>
+      <a href="/health">健康检查</a>
+    </div>
+  </div>
+
+  <script>
+    var API_BASE = '';
+    function log(msg) {
+      var el = document.getElementById('log');
+      if (el) el.textContent += (el.textContent ? '\n' : '') + msg;
+    }
+    function clearLog() {
+      var el = document.getElementById('log');
+      if (el) el.textContent = '';
+    }
+
+    document.getElementById('startBtn').onclick = async function() {
+      var raw = document.getElementById('tools').value.trim();
+      if (!raw) { alert('请输入至少一个工具名称'); return; }
+      var tools = raw.split(/[\n,]+/).map(function(s) { return s.trim(); }).filter(Boolean);
+      if (!tools.length) { alert('请输入至少一个工具名称'); return; }
+
+      var btn = this;
+      btn.disabled = true;
+      document.getElementById('resultCard').style.display = 'block';
+      document.getElementById('taskList').innerHTML = '';
+      clearLog();
+
+      try {
+        log('正在创建工具: ' + tools.join(', '));
+        var batchRes = await fetch(API_BASE + '/api/v1/tools/batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tools: tools })
+        });
+        if (!batchRes.ok) {
+          var err = await batchRes.text();
+          throw new Error('创建工具失败: ' + (err || batchRes.status));
+        }
+        var batch = await batchRes.json();
+        var toolIds = batch.tools.map(function(t) { return t.id; });
+        log('已创建/匹配 ' + batch.created + ' 个工具，开始扫描...');
+
+        var scanRes = await fetch(API_BASE + '/api/v1/scan/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tool_ids: toolIds })
+        });
+        if (!scanRes.ok) {
+          var err2 = await scanRes.text();
+          throw new Error('启动扫描失败: ' + (err2 || scanRes.status));
+        }
+        var scan = await scanRes.json();
+        log('扫描已启动，共 ' + scan.task_count + ' 个任务');
+
+        var listEl = document.getElementById('taskList');
+        var tasks = scan.tasks || [];
+        var reportIds = {};
+        function renderStatus() {
+          listEl.innerHTML = tasks.map(function(t) {
+            var r = reportIds[t.tool_id];
+            var extra = r ? '<div class="report-link"><a href="' + API_BASE + '/api/v1/reports/' + r + '" target="_blank">查看报告</a></div>' : '';
+            return '<div class="status ' + (t.status === 'completed' ? 'done' : t.status === 'failed' ? 'error' : 'pending') + '">' +
+              t.tool_name + ' — ' + t.status + extra + '</div>';
+          }).join('');
+        }
+        renderStatus();
+
+        var doneCount = 0;
+        var interval = setInterval(async function() {
+          for (var i = 0; i < tasks.length; i++) {
+            var t = tasks[i];
+            if (t.status === 'completed' || t.status === 'failed') continue;
+            try {
+              var stRes = await fetch(API_BASE + '/api/v1/scan/status/' + t.tool_id);
+              if (!stRes.ok) continue;
+              var st = await stRes.json();
+              t.status = st.status;
+              if (st.result && st.result.report_id) reportIds[t.tool_id] = st.result.report_id;
+              if (st.status === 'completed' || st.status === 'failed') doneCount++;
+            } catch (_) {}
+          }
+          renderStatus();
+          if (doneCount >= tasks.length) {
+            clearInterval(interval);
+            log('全部任务已完成');
+          }
+        }, 2000);
+      } catch (e) {
+        log('错误: ' + e.message);
+      }
+      btn.disabled = false;
+    };
+  </script>
+</body>
+</html>

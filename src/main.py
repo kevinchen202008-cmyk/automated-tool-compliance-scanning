@@ -4,7 +4,7 @@ Main entry point for Tool Compliance Scanning Agent Service
 """
 
 from fastapi import FastAPI, Depends, HTTPException, status, Query
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, validator
 from typing import Optional, List, Dict, Any
@@ -92,23 +92,21 @@ async def health_check():
 
 @app.get("/ui")
 async def ui():
-    """Web UI界面"""
+    """Web UI界面（无需授权，直接访问）"""
+    from pathlib import Path
+    ui_file = Path(__file__).resolve().parent / "static" / "index.html"
     try:
-        from pathlib import Path
-        ui_file = Path(__file__).parent / "static" / "index.html"
         if ui_file.exists():
             return FileResponse(path=str(ui_file), media_type="text/html")
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="UI文件不存在"
-            )
     except Exception as e:
-        logger.error(f"加载UI失败: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"加载UI失败: {str(e)}"
-        )
+        logger.warning(f"加载UI文件失败，返回备用页: {e}")
+    # 无 static/index.html 时返回备用页，避免 500
+    fallback = (
+        "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>工具合规扫描 Agent</title></head><body>"
+        "<h1>工具合规扫描 Agent</h1><p>Web UI 文件未找到，请使用以下链接：</p>"
+        "<ul><li><a href='/docs'>API 文档</a></li><li><a href='/health'>健康检查</a></li></ul></body></html>"
+    )
+    return HTMLResponse(content=fallback)
 
 
 # ==================== 数据模型 ====================

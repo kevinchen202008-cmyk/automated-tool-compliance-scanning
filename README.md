@@ -39,43 +39,63 @@
 └── README.md                # 本文件
 ```
 
-## 快速开始
+## 快速开始（下载即可运行）
 
-### 1. 环境要求
+### 方式一：一键运行（推荐）
 
-- Python 3.9+
-- pip 或 conda
+克隆项目后，在项目根目录执行：
 
-### 2. 安装依赖
+**Windows：**
+```batch
+run.bat
+```
+
+**Linux / macOS：**
+```bash
+chmod +x run.sh
+./run.sh
+```
+
+脚本会自动：创建 Python 虚拟环境（venv）、安装依赖、若缺少则创建 `config`/`data`/`logs` 目录，并启动服务。首次运行若存在 `docs/config-example.yaml` 会复制为 `config/config.yaml`，请编辑该文件填入 **GLM API Key**（远程 GLM 配置保持不变即可）。
+
+### 方式二：手动安装
+
+**1. 环境要求**
+
+- Python 3.9 或 3.10（项目内提供 `.python-version`，可用 pyenv/uv 等对齐版本）
+- pip
+
+**2. 安装依赖**
 
 ```bash
+python -m venv venv
+# Windows: venv\Scripts\activate
+# Linux/macOS: source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 3. 配置
+**3. 配置**
 
-复制配置示例文件并修改：
+复制配置示例并修改（若仓库中有示例）：
 
 ```bash
+mkdir -p config
 cp docs/config-example.yaml config/config.yaml
 ```
 
-编辑 `config/config.yaml`，填入你的 GLM API Key 等配置。
+编辑 `config/config.yaml`，填入 GLM API Key 等配置。
 
-### 4. 运行服务
+**4. 运行服务**
 
 ```bash
-# 开发模式
-python src/main.py
-
-# 或使用 uvicorn
-uvicorn src.main:app --host 0.0.0.0 --port 8080 --reload
+python start_server.py
 ```
 
-### 5. 访问服务
+### 访问服务
 
-- API 文档: http://localhost:8080/docs
-- 健康检查: http://localhost:8080/health
+- **Web UI**（无需授权）: http://localhost:8080/ui  
+- **API 文档**: http://localhost:8080/docs  
+- **健康检查**: http://localhost:8080/health
 
 ## 开发流程
 
