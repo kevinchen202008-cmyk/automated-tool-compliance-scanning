@@ -40,6 +40,11 @@
     .kb-banner { padding: 10px 12px; border-radius: 8px; border: 1px dashed var(--border); font-size: 13px; margin-top: 8px; }
     .kb-banner.new { border-color: var(--accent); }
     .kb-banner.diff { border-color: var(--warn); }
+    .data-source-badge { font-size: 0.75rem; color: var(--muted); margin-bottom: 12px; }
+    .data-source-badge span { padding: 2px 8px; border-radius: 4px; background: var(--bg); border: 1px solid var(--border); }
+    .data-source-badge.mixed span { border-color: var(--warn); color: var(--warn); }
+    .data-source-badge.ai span { border-color: var(--accent); color: var(--accent); }
+    .data-source-badge.kb span { color: var(--success); border-color: var(--success); }
     .kb-actions { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px; }
     .btn-sm { padding: 6px 10px; font-size: 12px; border-radius: 6px; }
     .kb-browse-card { margin-bottom: 16px; }
@@ -114,6 +119,12 @@
       var comm = report.commercial_restrictions || {};
       var alts = report.alternative_tools || [];
       var kbUpdate = report.knowledge_base_update || {};
+      var ds = report.data_source || {};
+      var ai = !!ds.ai_analysis;
+      var kb = !!ds.knowledge_base;
+      var sourceLabel = ai && kb ? '混合' : ai ? '本次 AI' : kb ? '工具信息库' : '无';
+      var sourceClass = ai && kb ? 'mixed' : ai ? 'ai' : kb ? 'kb' : '';
+      var sourceHtml = '<div class="data-source-badge' + (sourceClass ? ' ' + sourceClass : '') + '">数据来源：<span>' + escapeHtml(sourceLabel) + '</span></div>';
 
       var chinaText = comp.china_office ? '<span class="china-yes">√ 有中国分公司或服务</span>' : '无';
       var needLicense = comm.commercial_license_required === true;
@@ -172,6 +183,7 @@
 
       return '<div class="result-card">' +
         '<h2>' + escapeHtml(toolName) + '</h2>' +
+        sourceHtml +
         '<div class="result-section">' +
           '<h3>使用许可/开源协议</h3>' +
           '<div class="row"><span class="label">类型：</span>' + escapeHtml(lic.license_type || '未知') + '</div>' +
