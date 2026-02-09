@@ -1,6 +1,6 @@
 """
-知识库服务：管理工具知识库数据的增删改查
-Knowledge base service: Manage tool knowledge base data CRUD operations
+工具信息库服务：管理工具信息库数据的增删改查
+Tool information store service: Manage tool information store data CRUD operations
 """
 
 import json
@@ -14,7 +14,7 @@ logger = get_logger()
 
 def get_knowledge_base_entry(db: Session, tool_name: str) -> Optional[ToolKnowledgeBase]:
     """
-    从数据库获取工具知识库条目
+    从数据库获取工具信息库条目
     
     Args:
         db: 数据库会话
@@ -41,7 +41,7 @@ def get_knowledge_base_entry(db: Session, tool_name: str) -> Optional[ToolKnowle
 
 def knowledge_base_entry_to_dict(entry: ToolKnowledgeBase) -> Dict[str, Any]:
     """
-    将知识库条目转换为字典格式
+    将工具信息库条目转换为字典格式
     
     Args:
         entry: 知识库条目
@@ -83,7 +83,7 @@ def create_or_update_knowledge_base(
     updated_by: Optional[str] = None
 ) -> ToolKnowledgeBase:
     """
-    创建或更新知识库条目
+    创建或更新工具信息库条目
     
     Args:
         db: 数据库会话
@@ -119,7 +119,7 @@ def create_or_update_knowledge_base(
         entry.compliance_notes = data.get("compliance_notes")
         entry.source = source
         entry.updated_by = updated_by
-        logger.info(f"更新知识库条目: {tool_name} (来源: {source})")
+        logger.info(f"更新工具信息库条目: {tool_name} (来源: {source})")
     else:
         # 创建新条目
         entry = ToolKnowledgeBase(
@@ -146,7 +146,7 @@ def create_or_update_knowledge_base(
             updated_by=updated_by
         )
         db.add(entry)
-        logger.info(f"创建知识库条目: {tool_name} (来源: {source})")
+        logger.info(f"创建工具信息库条目: {tool_name} (来源: {source})")
     
     db.commit()
     db.refresh(entry)
@@ -155,7 +155,7 @@ def create_or_update_knowledge_base(
 
 def get_knowledge_base_dict(db: Session, tool_name: str) -> Optional[Dict[str, Any]]:
     """
-    从数据库获取工具知识库数据（字典格式）
+    从数据库获取工具信息库数据（字典格式）
     
     Args:
         db: 数据库会话
@@ -172,7 +172,7 @@ def get_knowledge_base_dict(db: Session, tool_name: str) -> Optional[Dict[str, A
 
 def list_all_knowledge_base_entries(db: Session, limit: int = 100, order_by: str = "tool_name") -> List[ToolKnowledgeBase]:
     """
-    列出所有知识库条目
+    列出所有工具信息库条目
     
     Args:
         db: 数据库会话
@@ -194,7 +194,7 @@ def list_all_knowledge_base_entries(db: Session, limit: int = 100, order_by: str
 
 def delete_knowledge_base_entry(db: Session, tool_name: str) -> bool:
     """
-    删除知识库条目
+    删除工具信息库条目
     
     Args:
         db: 数据库会话

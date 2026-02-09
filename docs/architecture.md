@@ -1,8 +1,8 @@
 ---
 title: 工具合规扫描 Agent 服务 架构设计
-version: 0.1.0
-status: draft
-date: 2026-02-06
+version: 0.2.0
+status: aligned-with-implementation
+date: 2026-02-09
 author: Architect (BMAD)
 ---
 
@@ -17,11 +17,13 @@ author: Architect (BMAD)
   - 基础设施层（AI 客户端、数据库、配置）
 
 ### 1.2 核心组件
-- `Web UI`：浏览器访问的前端（可先用简单模板/后端渲染）
-- `Scan Service`：工具合规扫描服务
-- `Compliance Engine`：合规规则与评分引擎
-- `AI Client`：对接 GLM 官方 Open API（以及可选其他模型）
-- `Report Service`：报告生成与导出
+- `Web UI`：浏览器访问的前端（当前为静态 `/ui` 单页），负责工具输入、进度展示与合规结果卡片展示
+- `Scan Service`：工具合规扫描服务，负责任务编排、并发控制、进度更新
+- `TOS Service`：TOS 信息搜索与拉取服务
+- `AI Client`：对接 GLM 官方 Open API（以及可选其他模型），执行 TOS 分析与替代方案分析
+- `Compliance Engine`：整理 AI / 工具信息库数据，生成合规报告所需结构（多维评分字段保留为后续扩展）
+- `Tool Information Store`（工具信息库）：存放经用户确认的工具合规信息（数据库 `ToolKnowledgeBase` + 内置工具信息）
+- `Report Service`：报告生成与导出，封装工具信息库更新建议
 - `Storage`：SQLite / MySQL 等持久化存储
 
 ---
@@ -44,6 +46,13 @@ author: Architect (BMAD)
    - 生成结构化报告实体（JSON）
    - 持久化到数据库（可选）
 6. Web UI 将报告以页面形式展示，并提供 JSON 导出
+
+### 2.2 前端交互说明（与工具信息库一致）
+
+- **扫描结果卡片**：每个工具完成后展示使用许可、公司信息、商用限制、可替代方案；同时读取报告中的 `knowledge_base_update`。
+- **新工具（pending_creation）**：提示“本次 AI 分析结果尚未写入工具信息库”，提供「将本次结果加入工具信息库」与「暂不保存，只查看本次结果」；仅用户点击加入时调用 `POST /api/v1/knowledge-base/{tool_name}/create-from-report?report_id=...`。
+- **存量工具（diff_available）**：展示与工具信息库的差异摘要及字段级 changes；有差异时提供「用本次 AI 结果更新工具信息库差异」与「保持工具信息库不变」；仅用户点击更新时调用 `POST /api/v1/knowledge-base/{tool_name}/update-from-report?report_id=...`。
+- **不操作**：选择暂不保存或保持不变时，不调用后端，工具信息库内容不变。
 
 ---
 

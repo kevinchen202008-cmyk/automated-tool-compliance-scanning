@@ -37,6 +37,11 @@
     .alt-block h4 { font-size: 14px; margin: 0 0 6px 0; }
     .alt-block .meta { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
     .alt-block .desc { font-size: 13px; line-height: 1.5; }
+    .kb-banner { padding: 10px 12px; border-radius: 8px; border: 1px dashed var(--border); font-size: 13px; margin-top: 8px; }
+    .kb-banner.new { border-color: var(--accent); }
+    .kb-banner.diff { border-color: var(--warn); }
+    .kb-actions { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px; }
+    .btn-sm { padding: 6px 10px; font-size: 12px; border-radius: 6px; }
   </style>
 </head>
 <body>
@@ -67,6 +72,7 @@
       var comp = report.company_info || {};
       var comm = report.commercial_restrictions || {};
       var alts = report.alternative_tools || [];
+      var kbUpdate = report.knowledge_base_update || {};
 
       var chinaText = comp.china_office ? '<span class="china-yes">√ 有中国分公司或服务</span>' : '无';
       var needLicense = comm.commercial_license_required === true;
@@ -88,6 +94,39 @@
           '</div>';
       }
       if (!altHtml) altHtml = '<div class="desc" style="color:var(--muted)">暂无替代方案</div>';
+
+      var kbHtml = '';
+      if (kbUpdate && kbUpdate.available) {
+        if (kbUpdate.action === 'pending_creation') {
+          kbHtml = '<div class="kb-banner new">' +
+            '<div>发现新工具，本次 AI 分析结果尚未写入工具信息库。</div>' +
+            '<div class="kb-actions">' +
+            '<button class="btn btn-sm" data-action="kb-create" data-tool="' + escapeHtml(toolName) + '" data-report-id="' + (report.compliance_report && report.compliance_report.id) + '">将本次结果加入工具信息库</button>' +
+            '<button class="btn btn-sm" data-action="kb-ignore" data-tool="' + escapeHtml(toolName) + '">暂不保存，只查看本次结果</button>' +
+            '</div>' +
+            '</div>';
+        } else if (kbUpdate.action === 'diff_available') {
+          var summary = kbUpdate.summary || ('发现 ' + (kbUpdate.change_count || 0) + ' 处差异');
+          var changes = kbUpdate.changes || [];
+          var changeList = changes.slice(0, 5).map(function(c) {
+            return '<li>' + escapeHtml(c.field_label || c.field || '') + '：' +
+              escapeHtml(String(c.old_value ?? '（原无）')) + ' → ' +
+              escapeHtml(String(c.new_value ?? '（新无）')) + '</li>';
+          }).join('');
+          if (!changeList) changeList = '<li>当前工具信息库记录与本次 AI 分析无显著差异。</li>';
+          kbHtml = '<div class="kb-banner diff">' +
+            '<div>工具信息库中已存在该工具记录。</div>' +
+            '<div>' + escapeHtml(summary) + '</div>' +
+            '<ul style="margin:6px 0 0 16px;padding:0;font-size:12px;">' + changeList + '</ul>' +
+            (kbUpdate.has_changes ? (
+              '<div class="kb-actions">' +
+              '<button class="btn btn-sm" data-action="kb-update" data-tool="' + escapeHtml(toolName) + '" data-report-id="' + (report.compliance_report && report.compliance_report.id) + '">用本次 AI 结果更新工具信息库差异</button>' +
+              '<button class="btn btn-sm" data-action="kb-keep" data-tool="' + escapeHtml(toolName) + '">保持工具信息库不变</button>' +
+              '</div>'
+            ) : '') +
+            '</div>';
+        }
+      }
 
       return '<div class="result-card">' +
         '<h2>' + escapeHtml(toolName) + '</h2>' +
@@ -115,6 +154,7 @@
         '<div class="result-section">' +
           '<h3>可替代方案</h3>' + altHtml +
         '</div>' +
+        (kbHtml ? '<div class="result-section">' + kbHtml + '</div>' : '') +
         '</div>';
     }
     function escapeHtml(s) {
@@ -123,6 +163,43 @@
       div.textContent = s;
       return div.innerHTML;
     }
+
+    async function handleKbAction(action, toolName, reportId, btn) {
+      try {
+        if (action === 'kb-create') {
+          btn.disabled = true;
+          var res = await fetch(API_BASE + '/api/v1/knowledge-base/' + encodeURIComponent(toolName) + '/create-from-report?report_id=' + encodeURIComponent(reportId), {
+            method: 'POST'
+          });
+          if (!res.ok) throw new Error('加入工具信息库失败: ' + (await res.text()) || res.status);
+          btn.textContent = '已加入工具信息库';
+        } else if (action === 'kb-update') {
+          btn.disabled = true;
+          var res2 = await fetch(API_BASE + '/api/v1/knowledge-base/' + encodeURIComponent(toolName) + '/update-from-report?report_id=' + encodeURIComponent(reportId), {
+            method: 'POST'
+          });
+          if (!res2.ok) throw new Error('更新工具信息库失败: ' + (await res2.text()) || res2.status);
+          btn.textContent = '工具信息库已更新';
+        } else if (action === 'kb-ignore' || action === 'kb-keep') {
+          // 前端仅标记为已忽略/保持现状，不调用后端
+          btn.textContent = action === 'kb-ignore' ? '已选择暂不保存' : '已选择保持不变';
+          btn.disabled = true;
+        }
+      } catch (e) {
+        alert(e.message || e);
+        btn.disabled = false;
+      }
+    }
+
+    document.addEventListener('click', function (evt) {
+      var target = evt.target.closest('[data-action]');
+      if (!target) return;
+      var action = target.getAttribute('data-action');
+      if (!/^kb-/.test(action)) return;
+      var tool = target.getAttribute('data-tool');
+      var reportId = target.getAttribute('data-report-id');
+      handleKbAction(action, tool, reportId, target);
+    });
 
     document.getElementById('startBtn').onclick = async function() {
       var raw = document.getElementById('tools').value.trim();

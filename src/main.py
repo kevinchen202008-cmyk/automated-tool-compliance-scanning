@@ -436,7 +436,7 @@ async def export_report(
         )
 
 
-# ==================== 知识库管理API ====================
+# ==================== 工具信息库管理 API（/knowledge-base） ====================
 
 @app.get("/api/v1/knowledge-base/{tool_name}", response_model=Dict[str, Any])
 async def get_knowledge_base_entry(
@@ -444,7 +444,7 @@ async def get_knowledge_base_entry(
     db: Session = Depends(get_db)
 ):
     """
-    获取工具知识库条目
+    获取工具信息库条目
     
     - **tool_name**: 工具名称
     """
@@ -456,7 +456,7 @@ async def get_knowledge_base_entry(
         if not kb_data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"知识库中不存在工具: {tool_name}"
+                detail=f"工具信息库中不存在工具: {tool_name}"
             )
         
         return {
@@ -467,10 +467,10 @@ async def get_knowledge_base_entry(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"获取知识库条目失败: {e}")
+        logger.error(f"获取工具信息库条目失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取知识库条目失败: {str(e)}"
+            detail=f"获取工具信息库条目失败: {str(e)}"
         )
 
 
@@ -720,12 +720,12 @@ async def create_kb_from_report(
         from src.services.knowledge_base_service import create_or_update_knowledge_base, knowledge_base_entry_to_dict, get_knowledge_base_entry
         from src.services.kb_diff_service import prepare_kb_data_from_tos_analysis
         
-        # 检查知识库中是否已存在
+        # 检查工具信息库中是否已存在
         existing_entry = get_knowledge_base_entry(db, tool_name)
         if existing_entry:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"知识库中已存在工具: {tool_name}，请使用更新接口"
+                detail=f"工具信息库中已存在工具: {tool_name}，请使用更新接口"
             )
         
         # 获取报告
@@ -744,10 +744,10 @@ async def create_kb_from_report(
                 detail="报告中没有TOS分析数据"
             )
         
-        # 准备知识库数据
+        # 准备工具信息库数据
         kb_data = prepare_kb_data_from_tos_analysis(tos_analysis)
         
-        # 创建知识库条目
+        # 创建工具信息库条目
         entry = create_or_update_knowledge_base(
             db=db,
             tool_name=tool_name,
@@ -756,10 +756,10 @@ async def create_kb_from_report(
             updated_by="user"
         )
         
-        logger.info(f"用户确认创建知识库条目: {tool_name} (报告ID: {report_id})")
+        logger.info(f"用户确认创建工具信息库条目: {tool_name} (报告ID: {report_id})")
         
         return {
-            "message": "知识库记录创建成功",
+            "message": "工具信息库记录创建成功",
             "tool_name": tool_name,
             "data": knowledge_base_entry_to_dict(entry)
         }
@@ -781,7 +781,7 @@ async def update_kb_from_report(
     db: Session = Depends(get_db)
 ):
     """
-    从报告结果更新知识库
+    从报告结果更新工具信息库
     
     - **tool_name**: 工具名称
     - **report_id**: 报告ID

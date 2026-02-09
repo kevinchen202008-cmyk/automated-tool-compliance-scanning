@@ -32,7 +32,7 @@ class ReportService:
         db: Session
     ) -> Dict[str, Any]:
         """
-        生成JSON格式的合规报告
+        生成JSON格式的合规报告（包含工具信息库更新建议）
         
         Args:
             tool: 工具对象
@@ -186,7 +186,7 @@ class ReportService:
         db: Session
     ) -> Dict[str, Any]:
         """
-        准备知识库更新信息
+        准备工具信息库（Tool Information Store）更新信息
         
         Args:
             tool: 工具对象
@@ -199,24 +199,24 @@ class ReportService:
         if not tos_analysis or len(tos_analysis) == 0:
             return {
                 "available": False,
-                "reason": "TOS分析数据不完整，无法更新知识库"
+                "reason": "TOS 分析数据不完整，无法更新工具信息库"
             }
         
         try:
             kb_update_info = check_and_prepare_kb_update(tool.name, tos_analysis, db)
             
             if kb_update_info["should_auto_create"]:
-                # 新工具，需要用户确认后才创建
-                logger.info(f"发现新工具，等待用户确认: {tool.name}")
+                # 新工具，需要用户确认后才创建到工具信息库
+                logger.info(f"发现新工具，等待用户确认入库: {tool.name}")
                 return {
                     "available": True,
                     "action": "pending_creation",
-                    "message": "发现新工具，请确认是否添加到知识库",
+                    "message": "发现新工具，请确认是否添加到工具信息库",
                     "new_data": kb_update_info["new_data"],
                     "tool_name": tool.name
                 }
             else:
-                # 存在记录，返回差异对比信息
+                # 工具信息库中已存在记录，返回差异对比信息
                 diff = kb_update_info["diff"]
                 return {
                     "available": True,
@@ -228,7 +228,7 @@ class ReportService:
                     "changes": diff["changes"][:10]  # 只返回前10个差异，避免数据过大
                 }
         except Exception as e:
-            logger.error(f"准备知识库更新信息失败: {tool.name} - {e}")
+            logger.error(f"准备工具信息库更新信息失败: {tool.name} - {e}")
             return {
                 "available": False,
                 "reason": f"处理失败: {str(e)}"

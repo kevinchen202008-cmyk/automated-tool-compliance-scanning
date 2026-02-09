@@ -17,7 +17,7 @@ def compare_kb_data(
     existing_data: Dict[str, Any]
 ) -> Dict[str, Any]:
     """
-    对比新数据和现有知识库数据的差异
+    对比新数据和现有工具信息库数据的差异
     
     Args:
         new_data: 新的扫描结果数据
@@ -160,7 +160,7 @@ def prepare_kb_data_from_tos_analysis(
     tos_analysis: Dict[str, Any]
 ) -> Dict[str, Any]:
     """
-    从TOS分析结果中提取知识库数据格式
+    从TOS分析结果中提取工具信息库数据格式
     
     Args:
         tos_analysis: TOS分析结果
@@ -196,7 +196,7 @@ def check_and_prepare_kb_update(
     db: Session
 ) -> Dict[str, Any]:
     """
-    检查知识库并准备更新信息
+    检查工具信息库并准备更新信息
     
     Args:
         tool_name: 工具名称
@@ -214,7 +214,7 @@ def check_and_prepare_kb_update(
     # 准备新数据
     new_data = prepare_kb_data_from_tos_analysis(tos_analysis)
     
-    # 检查知识库中是否存在
+    # 检查工具信息库中是否存在
     existing_data = get_knowledge_base_dict(db, tool_name)
     
     result = {
