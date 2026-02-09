@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>工具合规扫描 Agent</title>
   <style>
-    :root { --bg: #0f1419; --card: #1a2332; --text: #e6edf3; --muted: #8b949e; --accent: #58a6ff; --success: #3fb950; --border: #30363d; }
+    :root { --bg: #0f1419; --card: #1a2332; --text: #e6edf3; --muted: #8b949e; --accent: #58a6ff; --success: #3fb950; --warn: #d29922; --danger: #f85149; --border: #30363d; }
     * { box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 24px; min-height: 100vh; }
-    .container { max-width: 720px; margin: 0 auto; }
+    .container { max-width: 900px; margin: 0 auto; }
     h1 { font-size: 1.5rem; margin-bottom: 8px; }
     .sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 24px; }
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
@@ -17,50 +17,111 @@
     .btn { display: inline-block; padding: 10px 18px; background: var(--accent); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; margin-right: 8px; margin-top: 8px; }
     .btn:hover { opacity: 0.9; }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .links { margin-top: 24px; }
-    .links a { color: var(--accent); text-decoration: none; margin-right: 16px; }
-    .links a:hover { text-decoration: underline; }
-    #log { margin-top: 16px; font-family: ui-monospace, monospace; font-size: 13px; white-space: pre-wrap; word-break: break-all; color: var(--muted); max-height: 300px; overflow-y: auto; }
-    .status { padding: 8px 12px; border-radius: 8px; margin: 4px 0; font-size: 13px; }
-    .status.pending { background: rgba(88,166,255,0.15); border: 1px solid var(--accent); }
-    .status.done { background: rgba(63,185,80,0.15); border: 1px solid var(--success); }
-    .status.error { background: rgba(248,81,73,0.15); border: 1px solid #f85149; }
-    .report-link { margin-top: 8px; }
-    .report-link a { color: var(--success); }
+    .task-item { padding: 10px 12px; border-radius: 8px; margin-bottom: 8px; font-size: 14px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+    .task-item.pending { background: rgba(88,166,255,0.1); border-color: var(--accent); }
+    .task-item.done { background: rgba(63,185,80,0.1); border-color: var(--success); }
+    .task-item.error { background: rgba(248,81,73,0.1); border-color: var(--danger); }
+    .task-name { font-weight: 500; }
+    .task-status { color: var(--muted); font-size: 13px; }
+
+    .result-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-top: 20px; }
+    .result-card h2 { font-size: 1.25rem; margin: 0 0 20px 0; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+    .result-section { margin-bottom: 20px; }
+    .result-section h3 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 0 0 8px 0; }
+    .result-section .row { font-size: 14px; line-height: 1.6; margin: 4px 0; }
+    .result-section .label { color: var(--muted); margin-right: 8px; }
+    .yes { color: var(--success); }
+    .no { color: var(--danger); }
+    .china-yes { color: var(--success); }
+    .alt-block { background: var(--bg); border-radius: 8px; padding: 12px; margin-top: 12px; }
+    .alt-block h4 { font-size: 14px; margin: 0 0 6px 0; }
+    .alt-block .meta { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    .alt-block .desc { font-size: 13px; line-height: 1.5; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>工具合规扫描 Agent</h1>
-    <p class="sub">输入工具名称（每行一个或逗号分隔），创建工具并启动合规扫描。本页面直接调用本地 API，无需授权头。</p>
+    <p class="sub">输入单个或多个工具名称，点击开始扫描；下方将显示每个工具的进展，完成后展示合规结果（使用许可、公司信息、商用限制、可替代方案）。</p>
 
     <div class="card">
-      <label for="tools">工具名称</label>
-      <textarea id="tools" placeholder="例如：&#10;Docker Desktop&#10;Git&#10;VS Code"></textarea>
-      <button class="btn" id="startBtn">创建工具并开始扫描</button>
+      <label for="tools">工具名称（每行一个或逗号分隔）</label>
+      <textarea id="tools" placeholder="例如：&#10;Docker Desktop&#10;Docker CE&#10;Git"></textarea>
+      <button class="btn" id="startBtn">开始扫描</button>
     </div>
 
-    <div class="card" id="resultCard" style="display: none;">
-      <strong>扫描任务</strong>
+    <div class="card" id="progressCard" style="display: none;">
+      <strong>扫描进展</strong>
       <div id="taskList"></div>
-      <div id="log"></div>
     </div>
 
-    <div class="links">
-      <a href="/docs">API 文档</a>
-      <a href="/health">健康检查</a>
-    </div>
+    <div id="resultContainer"></div>
   </div>
 
   <script>
     var API_BASE = '';
-    function log(msg) {
-      var el = document.getElementById('log');
-      if (el) el.textContent += (el.textContent ? '\n' : '') + msg;
+
+    function renderResult(report) {
+      var toolName = (report.tool && report.tool.name) || '未知工具';
+      var lic = report.license_info || {};
+      var comp = report.company_info || {};
+      var comm = report.commercial_restrictions || {};
+      var alts = report.alternative_tools || [];
+
+      var chinaText = comp.china_office ? '<span class="china-yes">√ 有中国分公司或服务</span>' : '无';
+      var needLicense = comm.commercial_license_required === true;
+      var freeCommercial = comm.free_for_commercial === true;
+      var needLicenseHtml = needLicense ? '<span class="no">是</span>' : '<span class="yes">否</span>';
+      var freeCommercialHtml = freeCommercial ? '<span class="yes">是</span>' : '<span class="no">否</span>';
+
+      var altHtml = '';
+      for (var i = 0; i < alts.length; i++) {
+        var a = alts[i];
+        var name = a.name || '未命名';
+        var typeLicense = [a.type, a.license].filter(Boolean).join(' | 许可证: ') || '开源';
+        var adv = a.advantages || '';
+        var scene = a.use_case || a.use_scenario || '';
+        altHtml += '<div class="alt-block"><h4>' + escapeHtml(name) + '</h4>' +
+          '<div class="meta">' + escapeHtml(typeLicense) + '</div>' +
+          (adv ? '<div class="desc"><strong>优势：</strong>' + escapeHtml(adv) + '</div>' : '') +
+          (scene ? '<div class="desc" style="margin-top:6px"><strong>适用场景：</strong>' + escapeHtml(scene) + '</div>' : '') +
+          '</div>';
+      }
+      if (!altHtml) altHtml = '<div class="desc" style="color:var(--muted)">暂无替代方案</div>';
+
+      return '<div class="result-card">' +
+        '<h2>' + escapeHtml(toolName) + '</h2>' +
+        '<div class="result-section">' +
+          '<h3>使用许可/开源协议</h3>' +
+          '<div class="row"><span class="label">类型：</span>' + escapeHtml(lic.license_type || '未知') + '</div>' +
+          '<div class="row"><span class="label">版本：</span>' + escapeHtml(lic.license_version || '—') + '</div>' +
+          '<div class="row"><span class="label">模式：</span>' + escapeHtml(lic.license_mode || '—') + '</div>' +
+        '</div>' +
+        '<div class="result-section">' +
+          '<h3>公司信息</h3>' +
+          '<div class="row"><span class="label">公司名称：</span>' + escapeHtml(comp.company_name || '—') + '</div>' +
+          '<div class="row"><span class="label">所属国家：</span>' + escapeHtml(comp.company_country || '—') + '</div>' +
+          '<div class="row"><span class="label">总部：</span>' + escapeHtml(comp.company_headquarters || '—') + '</div>' +
+          '<div class="row"><span class="label">中国服务：</span>' + chinaText + '</div>' +
+        '</div>' +
+        '<div class="result-section">' +
+          '<h3>商用用户使用限制</h3>' +
+          '<div class="row"><span class="label">需购买License：</span>' + needLicenseHtml + '</div>' +
+          '<div class="row"><span class="label">允许免费商用：</span>' + freeCommercialHtml + '</div>' +
+          (comm.restrictions ? '<div class="row"><span class="label">限制说明：</span>' + escapeHtml(comm.restrictions) + '</div>' : '') +
+          (comm.user_limit ? '<div class="row"><span class="label">用户限制：</span>' + escapeHtml(comm.user_limit) + '</div>' : '') +
+          (comm.feature_restrictions ? '<div class="row"><span class="label">功能限制：</span>' + escapeHtml(comm.feature_restrictions) + '</div>' : '') +
+        '</div>' +
+        '<div class="result-section">' +
+          '<h3>可替代方案</h3>' + altHtml +
+        '</div>' +
+        '</div>';
     }
-    function clearLog() {
-      var el = document.getElementById('log');
-      if (el) el.textContent = '';
+    function escapeHtml(s) {
+      if (s == null) return '';
+      var div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
     }
 
     document.getElementById('startBtn').onclick = async function() {
@@ -71,49 +132,41 @@
 
       var btn = this;
       btn.disabled = true;
-      document.getElementById('resultCard').style.display = 'block';
+      document.getElementById('progressCard').style.display = 'block';
       document.getElementById('taskList').innerHTML = '';
-      clearLog();
+      document.getElementById('resultContainer').innerHTML = '';
 
       try {
-        log('正在创建工具: ' + tools.join(', '));
         var batchRes = await fetch(API_BASE + '/api/v1/tools/batch', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ tools: tools })
         });
-        if (!batchRes.ok) {
-          var err = await batchRes.text();
-          throw new Error('创建工具失败: ' + (err || batchRes.status));
-        }
+        if (!batchRes.ok) throw new Error('创建工具失败: ' + (await batchRes.text()) || batchRes.status);
         var batch = await batchRes.json();
         var toolIds = batch.tools.map(function(t) { return t.id; });
-        log('已创建/匹配 ' + batch.created + ' 个工具，开始扫描...');
 
         var scanRes = await fetch(API_BASE + '/api/v1/scan/start', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ tool_ids: toolIds })
         });
-        if (!scanRes.ok) {
-          var err2 = await scanRes.text();
-          throw new Error('启动扫描失败: ' + (err2 || scanRes.status));
-        }
+        if (!scanRes.ok) throw new Error('启动扫描失败: ' + (await scanRes.text()) || scanRes.status);
         var scan = await scanRes.json();
-        log('扫描已启动，共 ' + scan.task_count + ' 个任务');
-
-        var listEl = document.getElementById('taskList');
         var tasks = scan.tasks || [];
         var reportIds = {};
-        function renderStatus() {
-          listEl.innerHTML = tasks.map(function(t) {
-            var r = reportIds[t.tool_id];
-            var extra = r ? '<div class="report-link"><a href="' + API_BASE + '/api/v1/reports/' + r + '" target="_blank">查看报告</a></div>' : '';
-            return '<div class="status ' + (t.status === 'completed' ? 'done' : t.status === 'failed' ? 'error' : 'pending') + '">' +
-              t.tool_name + ' — ' + t.status + extra + '</div>';
+        var fetchedReports = {};
+
+        function renderTasks() {
+          document.getElementById('taskList').innerHTML = tasks.map(function(t) {
+            var statusText = t.status === 'completed' ? '已完成' : t.status === 'failed' ? '失败' : '扫描中...';
+            return '<div class="task-item ' + (t.status === 'completed' ? 'done' : t.status === 'failed' ? 'error' : 'pending') + '">' +
+              '<span class="task-name">' + escapeHtml(t.tool_name) + '</span>' +
+              '<span class="task-status">' + statusText + '</span>' +
+              '</div>';
           }).join('');
         }
-        renderStatus();
+        renderTasks();
 
         var doneCount = 0;
         var interval = setInterval(async function() {
@@ -126,17 +179,42 @@
               var st = await stRes.json();
               t.status = st.status;
               if (st.result && st.result.report_id) reportIds[t.tool_id] = st.result.report_id;
-              if (st.status === 'completed' || st.status === 'failed') doneCount++;
+              if (t.status === 'completed') doneCount++;
+              if (t.status === 'failed') doneCount++;
             } catch (_) {}
           }
-          renderStatus();
+          renderTasks();
+
+          for (var tid in reportIds) {
+            if (fetchedReports[tid]) continue;
+            var rid = reportIds[tid];
+            try {
+              var rRes = await fetch(API_BASE + '/api/v1/reports/' + rid);
+              if (!rRes.ok) continue;
+              var report = await rRes.json();
+              fetchedReports[tid] = true;
+              var container = document.getElementById('resultContainer');
+              container.insertAdjacentHTML('beforeend', renderResult(report));
+            } catch (_) {}
+          }
+
           if (doneCount >= tasks.length) {
             clearInterval(interval);
-            log('全部任务已完成');
+            for (var tid2 in reportIds) {
+              if (fetchedReports[tid2]) continue;
+              var rid2 = reportIds[tid2];
+              try {
+                var rRes2 = await fetch(API_BASE + '/api/v1/reports/' + rid2);
+                if (!rRes2.ok) continue;
+                var report2 = await rRes2.json();
+                document.getElementById('resultContainer').insertAdjacentHTML('beforeend', renderResult(report2));
+              } catch (_) {}
+              fetchedReports[tid2] = true;
+            }
           }
         }, 2000);
       } catch (e) {
-        log('错误: ' + e.message);
+        document.getElementById('taskList').innerHTML = '<div class="task-item error">错误: ' + escapeHtml(e.message) + '</div>';
       }
       btn.disabled = false;
     };
