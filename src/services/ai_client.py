@@ -133,7 +133,8 @@ class GLMClient(AIClientBase):
                             error_detail = error_json.get("error", {})
                             error_message = error_detail.get("message", "速率限制")
                             error_code = error_detail.get("code", "429")
-                        except:
+                            logger.info("GLM API错误详情: %s", error_json)
+                        except Exception:
                             error_message = "速率限制"
                             error_code = "429"
                         
@@ -191,7 +192,10 @@ class GLMClient(AIClientBase):
                     await asyncio.sleep(delay)
                     continue
                 else:
-                    logger.error(f"GLM API请求超时，已重试 {max_retries} 次")
+                    logger.error(
+                        f"GLM API请求超时，已重试 {max_retries} 次。"
+                        "（若频繁出现，可检查网络或 GLM 服务状态；额度限制会显示 429/速率限制）"
+                    )
                     raise
                     
             except httpx.RequestError as e:
