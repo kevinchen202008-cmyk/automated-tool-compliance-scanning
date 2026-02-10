@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Optional, List, Dict, Any
 import yaml
 from pydantic import BaseModel, Field, validator
+from typing import Optional as TypingOptional
 from pydantic_settings import BaseSettings
 
 
@@ -173,6 +174,7 @@ class CORSConfig(BaseModel):
 class SecurityConfig(BaseModel):
     """安全配置"""
     enable_auth: bool = False
+    api_key: Optional[str] = None
     session_timeout: int = 3600  # 秒
 
 

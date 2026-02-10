@@ -3,12 +3,13 @@
 Main entry point for Tool Compliance Scanning Agent Service
 """
 
-from fastapi import FastAPI, Depends, HTTPException, status, Query
+from fastapi import FastAPI, Depends, HTTPException, status, Query, Header
 from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, validator
 from typing import Optional, List, Dict, Any
 import json
+import os
 from src.config import get_config, load_config
 from src.database import init_database, check_database_exists, get_db
 from src.logger import setup_logger, get_logger
@@ -32,6 +33,30 @@ logger = get_logger()
 # 加载配置
 load_config()
 config = get_config()
+
+
+async def api_auth_guard(x_api_key: Optional[str] = Header(None)):
+    """
+    简单的 API Key 鉴权预留
+    - 当 config.web.security.enable_auth = false 时不生效
+    - 当启用时，优先从 config.web.security.api_key 或环境变量 API_KEY 读取期望值
+    """
+    cfg = get_config()
+    sec = cfg.web.security
+    if not sec.enable_auth:
+        return
+    expected = sec.api_key or os.getenv("API_KEY")
+    if not expected:
+        # 启用了鉴权但未配置密钥，视为配置错误
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="API 鉴权已启用但未配置 api_key"
+        )
+    if x_api_key != expected:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorized"
+        )
 
 # 创建FastAPI应用
 app = FastAPI(
@@ -161,6 +186,11 @@ class ScanTaskStatusResponse(BaseModel):
     current_step: Optional[str] = None  # 当前步骤描述
     result: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
+
+
+class ComplianceScanRequest(BaseModel):
+    """一体化合规扫描请求（工具名列表）"""
+    tools: List[str] = Field(..., description="工具名称列表", min_items=1)
 
 
 # ==================== 工具管理API ====================
@@ -298,6 +328,63 @@ async def start_scan(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"启动扫描失败: {str(e)}"
+        )
+
+
+@app.post("/api/v1/compliance/scan", response_model=ScanResponse, status_code=status.HTTP_202_ACCEPTED)
+async def compliance_scan(
+    request: ComplianceScanRequest,
+    db: Session = Depends(get_db),
+    _: None = Depends(api_auth_guard)
+):
+    """
+    一体化合规扫描接口（工具名称列表）
+    
+    - **tools**: 工具名称列表
+    
+    行为：
+    1. 批量创建/获取工具记录（与 /api/v1/tools/batch 一致）
+    2. 启动扫描任务（与 /api/v1/scan/start 一致）
+    3. 返回 ScanResponse，包含任务列表
+    """
+    try:
+        tool_names = [t.strip() for t in (request.tools or []) if t and t.strip()]
+        if not tool_names:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="tools 列表不能为空"
+            )
+        
+        tools, existing_count = batch_create_tools(db, tool_names)
+        tool_ids = [tool.id for tool in tools]
+        
+        scan_service = get_scan_service()
+        tasks = scan_service.create_scan_tasks(tool_ids, db)
+        scan_service.start()
+        
+        tasks_info = [
+            {
+                "tool_id": task.tool_id,
+                "tool_name": task.tool_name,
+                "status": task.status.value,
+                "report_id": None
+            }
+            for task in tasks
+        ]
+        
+        return ScanResponse(
+            message=f\"扫描任务已启动（共 {len(tasks)} 个工具，其中已存在 {existing_count} 个）\",
+            task_count=len(tasks),
+            tool_ids=tool_ids,
+            tasks=tasks_info
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f\"一体化合规扫描失败: {e}\")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f\"一体化合规扫描失败: {str(e)}\"
         )
 
 

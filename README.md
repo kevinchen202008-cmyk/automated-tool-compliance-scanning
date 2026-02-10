@@ -93,9 +93,9 @@ python start_server.py
 
 ### 访问服务
 
-- **Web UI**（无需授权）: http://localhost:8080/ui  
-- **API 文档**: http://localhost:8080/docs  
-- **健康检查**: http://localhost:8080/health
+- **Web UI**（无需授权）: 默认 `http://localhost:8080/ui`（端口可在 `config/config.yaml` 的 `service.port` 中调整）  
+- **API 文档**: `http://localhost:<port>/docs`  
+- **健康检查**: `http://localhost:<port>/health`
 
 ## 开发流程
 

@@ -78,12 +78,17 @@ class GLMClient(AIClientBase):
     
     def __init__(self):
         config = get_config()
-        self.api_base = config.ai.glm.api_base
-        self.api_key = config.ai.glm.api_key
-        self.model = config.ai.glm.model
-        self.temperature = config.ai.glm.temperature
-        self.max_tokens = config.ai.glm.max_tokens
-        self.timeout = config.ai.glm.timeout
+        glm_conf = getattr(config.ai, "glm", None)
+        if glm_conf is None:
+            # 无配置文件或配置中未提供 glm 段时，使用 GLMConfig 默认值，避免 NoneType 报错
+            from src.config import GLMConfig
+            glm_conf = GLMConfig()
+        self.api_base = glm_conf.api_base
+        self.api_key = glm_conf.api_key
+        self.model = glm_conf.model
+        self.temperature = glm_conf.temperature
+        self.max_tokens = glm_conf.max_tokens
+        self.timeout = glm_conf.timeout
     
     async def _call_api(self, messages: List[Dict[str, str]]) -> Optional[str]:
         """

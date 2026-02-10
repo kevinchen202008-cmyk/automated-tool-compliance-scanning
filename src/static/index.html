@@ -48,6 +48,8 @@
     .kb-actions { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px; }
     .btn-sm { padding: 6px 10px; font-size: 12px; border-radius: 6px; }
     .kb-browse-card { margin-bottom: 16px; }
+    .kb-toolbar { margin-top: 8px; font-size: 13px; display: flex; align-items: center; gap: 8px; color: var(--muted); }
+    .kb-toolbar select { padding: 4px 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 13px; }
     .kb-panel { display: flex; gap: 20px; margin-top: 16px; align-items: stretch; min-height: 320px; }
     .kb-left { width: 260px; flex-shrink: 0; display: flex; flex-direction: column; }
     .kb-left .kb-search { width: 100%; padding: 8px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; margin-bottom: 10px; }
@@ -95,6 +97,13 @@
       <strong>工具信息库浏览</strong>
       <p class="sub" style="margin-bottom:12px;">加载工具信息库列表，左侧按工具名称罗列（可筛选），右侧显示合规关键信息；默认展示第一条，点击左侧项切换。</p>
       <button class="btn" id="kbLoadListBtn">加载工具信息库列表</button>
+      <div class="kb-toolbar">
+        <span>排序：</span>
+        <select id="kbOrder">
+          <option value="tool_name">按名称</option>
+          <option value="updated_at">按更新时间</option>
+        </select>
+      </div>
       <div class="kb-panel" id="kbPanel" style="display: none;">
         <div class="kb-left">
           <input type="text" class="kb-search" id="kbSearch" placeholder="按工具名称筛选…" />
@@ -323,6 +332,7 @@
     var kbFilteredEntries = [];
     var kbSelectedTool = null;
     var kbEditFullData = null;
+    var kbOrderBy = 'tool_name';
 
     async function loadKbDetail(toolName) {
       var detailEl = document.getElementById('kbDetail');
@@ -386,7 +396,7 @@
       listEl.innerHTML = '<span class="task-status">加载中…</span>';
       detailEl.innerHTML = '';
       try {
-        var res = await fetch(API_BASE + '/api/v1/knowledge-base?limit=1000&order_by=tool_name');
+        var res = await fetch(API_BASE + '/api/v1/knowledge-base?limit=1000&order_by=' + encodeURIComponent(kbOrderBy));
         if (!res.ok) throw new Error('加载列表失败: ' + (await res.text()) || res.status);
         var data = await res.json();
         kbEntriesCache = data.entries || [];
@@ -431,6 +441,11 @@
       renderKbList();
       await loadKbDetail(toolName);
     });
+
+    document.getElementById('kbOrder').onchange = function() {
+      kbOrderBy = this.value || 'tool_name';
+      document.getElementById('kbLoadListBtn').click();
+    };
 
     async function handleKbAction(action, toolName, reportId, btn) {
       try {
