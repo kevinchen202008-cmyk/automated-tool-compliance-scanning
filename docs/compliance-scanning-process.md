@@ -451,6 +451,14 @@ ComplianceReport (合规报告)
   ├─ recommendations (JSON)
   ├─ references (JSON)
   └─ tos_analysis (JSON)
+
+ToolKnowledgeBase (工具信息库)
+  ├─ tool_name
+  ├─ license_type, license_version, license_mode
+  ├─ company_*, china_office
+  ├─ commercial_*, user_limit, feature_restrictions
+  ├─ alternative_tools (JSON)
+  └─ source, updated_at, updated_by
 ```
 
 ### 4.2 报告数据结构
@@ -497,9 +505,35 @@ ComplianceReport (合规报告)
     "score_overall": 70.0,
     "reasons": {...},
     "recommendations": {...}
+  },
+  "data_source": {
+    "ai_analysis": true,
+    "knowledge_base": false
+  },
+  "knowledge_base_update": {
+    "available": true,
+    "action": "pending_creation",
+    "tool_name": "Docker Desktop",
+    "message": "...",
+    "new_data": {...}
   }
 }
 ```
+
+- **data_source**：数据来源标识，与前端「数据来源」展示一致。
+  - `ai_analysis`：本次扫描是否包含有效 AI 分析结果。
+  - `knowledge_base`：是否用到了工具信息库数据（补全或回退）。
+  - 前端展示：本次 AI / 工具信息库 / 混合（两者皆有）/ 无。
+- **knowledge_base_update**：工具信息库更新建议，仅用户确认时写入。
+  - 新工具：`action: pending_creation`，用户可「加入工具信息库」或「暂不保存」。
+  - 已入库工具：`action: diff_available`，可查看差异并「更新差异」或「保持不变」。
+
+### 4.3 工具信息库浏览与维护
+
+- **列表与详情**：`GET /api/v1/knowledge-base` 列表，`GET /api/v1/knowledge-base/{tool_name}/detail` 详情；前端支持按名称筛选、左右分栏展示、默认选中第一条。
+- **编辑**：`GET /api/v1/knowledge-base/{tool_name}` 拉取完整数据，前端编辑表单提交 `PUT /api/v1/knowledge-base/{tool_name}` 保存。
+- **删除**：前端确认后调用 `DELETE /api/v1/knowledge-base/{tool_name}`，成功后从列表移除并刷新详情。
+- **入库/更新**：扫描结果卡片根据 `knowledge_base_update` 调用 `create-from-report` 或 `update-from-report`，仅用户点击时写入。
 
 ## 5. 关键特性
 

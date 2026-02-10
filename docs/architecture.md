@@ -4,6 +4,7 @@ version: 0.2.0
 status: aligned-with-implementation
 date: 2026-02-09
 author: Architect (BMAD)
+# 阶段性交付归档: v0.5 技术架构见 docs/delivery/architecture-v0.5.md
 ---
 
 ## 1. 架构概要
