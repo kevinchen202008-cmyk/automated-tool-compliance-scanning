@@ -373,7 +373,7 @@ async def compliance_scan(
         ]
         
         return ScanResponse(
-            message=f\"扫描任务已启动（共 {len(tasks)} 个工具，其中已存在 {existing_count} 个）\",
+            message=f"扫描任务已启动（共 {len(tasks)} 个工具，其中已存在 {existing_count} 个）",
             task_count=len(tasks),
             tool_ids=tool_ids,
             tasks=tasks_info
@@ -381,10 +381,10 @@ async def compliance_scan(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f\"一体化合规扫描失败: {e}\")
+        logger.error(f"一体化合规扫描失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f\"一体化合规扫描失败: {str(e)}\"
+            detail=f"一体化合规扫描失败: {str(e)}"
         )
 
 

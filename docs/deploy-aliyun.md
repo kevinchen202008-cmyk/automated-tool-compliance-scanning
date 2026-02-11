@@ -120,14 +120,15 @@ docker push registry.cn-hangzhou.aliyuncs.com/your-namespace/tool-compliance-sca
 **步骤一：准备 ECS 实例**
 
 1. 在阿里云创建或选用一台 ECS（建议与 ACR 同地域，如新加坡）。
-2. 安装 Docker 与 Docker Compose（若未安装）：
+2. 安装 Docker 与 Docker Compose（若未安装），并让 **SSH 登录用户** 能直接执行 `docker`（否则 CI 会报 `docker: command not found`）：
    ```bash
-   # 以 Ubuntu 为例
+   # 以 Ubuntu 为例（用你实际用于 SSH 的用户执行，如 ubuntu）
    curl -fsSL https://get.docker.com | sh
    sudo usermod -aG docker $USER
-   # 安装 Docker Compose 插件或 standalone 版本
    sudo apt-get update && sudo apt-get install -y docker-compose-plugin
+   # 重新登录 SSH 一次，或执行 newgrp docker，使 docker 组生效
    ```
+   **若 deploy-to-ecs 报错 “docker: command not found”**：说明 ECS 上未安装 Docker，或当前 SSH 用户不在 `docker` 组。SSH 登录 ECS 后执行 `docker run hello-world` 能成功，再重跑 Actions；若失败，按上面安装并 `sudo usermod -aG docker <你的SSH用户名>` 后重新登录。
 3. 在 ECS 上创建目录并放入配置与编排文件：
    ```bash
    sudo mkdir -p /opt/tool-compliance-scanning/{config,data,logs}
@@ -179,7 +180,26 @@ services:
 EOF
 ```
 
-再把本地的 `config/config.yaml` 拷贝到 ECS 的 `/opt/tool-compliance-scanning/config/config.yaml`（可 `scp` 或粘贴），并填写 `ai.glm.api_key`。完成后重新 push 或重跑 Actions 即可。
+再把本地的 `config/config.yaml` 拷贝到 ECS 的 `/opt/tool-compliance-scanning/config/config.yaml`，并填写 `ai.glm.api_key`。**推荐用下面的 scp 方式传文件，避免在终端里粘贴多行内容**（粘贴有误执行、BOM/乱码等风险）。
+
+**将 config.yaml 传到 ECS（推荐，避免粘贴风险）**  
+ECS 通常只允许密钥登录，需用**与 SSH 登录相同的私钥**执行 scp（注意 `host` 与远程路径之间是**冒号**）：
+
+- **在 WSL 中**（将 `你的密钥路径` 换成实际 .pem 路径，如 `~/.ssh/aliyun_ecs.pem`）：
+  ```bash
+  scp -i 你的密钥路径 -P 22 "/mnt/d/Projects/tool compliance scanning agent/config/config.yaml" ubuntu@8.219.240.184:/tmp/config.yaml
+  ```
+- **在 PowerShell 中**（若已安装 OpenSSH 且使用密钥）：
+  ```powershell
+  scp -i "C:\path\to\your-key.pem" -P 22 "D:\Projects\tool compliance scanning agent\config\config.yaml" ubuntu@8.219.240.184:/tmp/config.yaml
+  ```
+
+传完后在 ECS 上执行：
+```bash
+sudo mv /tmp/config.yaml /opt/tool-compliance-scanning/config/config.yaml
+```
+
+若本机没有与 ECS 对应的私钥，可到阿里云 ECS 控制台为该实例绑定/创建密钥对，并下载私钥到本机后再用上述 scp。
 
 **步骤二：配置 GitHub 仓库**
 
@@ -201,6 +221,23 @@ EOF
 
 再次 push 到 `main`（或空提交 `git commit --allow-empty -m "ci: trigger deploy" && git push origin main`）。  
 在 **Actions** 中应看到 **build-and-push-image** 与 **deploy-to-ecs** 均成功；ECS 上 `docker compose ps` 应显示容器在运行，访问 `http://<ECS 公网 IP>:8080/ui` 可打开服务。
+
+**若容器状态为 Restarting，或浏览器访问 8080 报 ERR_CONNECTION_REFUSED**  
+说明容器内的应用启动后立即退出，需在 ECS 上查看退出原因：
+
+```bash
+cd /opt/tool-compliance-scanning
+docker compose logs --tail=100 tool-compliance
+# 或
+docker logs --tail=100 tool-compliance-scanning
+```
+
+根据日志中的报错处理：
+- **配置文件不存在 / 格式错误**：确认 `/opt/tool-compliance-scanning/config/config.yaml` 存在且为合法 YAML，无多余 BOM 或乱码。**不建议在终端中粘贴多行内容**（易误执行或引入乱码），优先用上文「将 config.yaml 传到 ECS」中的 `scp -i` 从本机重新拷贝。**若已用粘贴方式创建了该文件**，建议在 ECS 上执行一次 `dos2unix /opt/tool-compliance-scanning/config/config.yaml`（需先 `apt install dos2unix` 若未安装），将换行符转为 Unix 格式，避免容器内解析失败导致 Restarting。
+- **数据库路径**：若使用默认配置，数据库会写在容器内；建议在 ECS 的 `config/config.yaml` 中设置 `database.path: "/data/compliance.db"`，使数据落在挂载卷上。
+- **端口被占用**：容器内 8080 被占用的概率较低；若日志中有端口相关错误，可把 `config.yaml` 中 `service.port` 改为其他端口，并在 `docker-compose.yml` 中同步修改 `ports`（如 `8081:8081`）。
+
+修好配置后执行 `docker compose up -d --force-recreate` 重新创建并启动容器。
 
 ---
 
