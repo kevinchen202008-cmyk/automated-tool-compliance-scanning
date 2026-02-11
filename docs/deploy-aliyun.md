@@ -156,6 +156,31 @@ docker push registry.cn-hangzhou.aliyuncs.com/your-namespace/tool-compliance-sca
    cd /opt/tool-compliance-scanning && docker compose pull && docker compose up -d
    ```
 
+**若 deploy-to-ecs 报错 “cd: /opt/tool-compliance-scanning: No such file or directory”**  
+说明 ECS 上尚未创建该目录和 `docker-compose.yml`。SSH 登录 ECS 后，**一次性**执行下面整段（把镜像地址换成你的 ACR 地址）：
+
+```bash
+sudo mkdir -p /opt/tool-compliance-scanning/{config,data,logs}
+sudo tee /opt/tool-compliance-scanning/docker-compose.yml << 'EOF'
+version: "3.9"
+services:
+  tool-compliance:
+    image: crpi-t12lsuwwuworwsj3.ap-southeast-1.personal.cr.aliyuncs.com/tool-compliance-scan/repo-for-tool-compliance-scan:latest
+    container_name: tool-compliance-scanning
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - CONFIG_PATH=/config/config.yaml
+    volumes:
+      - /opt/tool-compliance-scanning/config:/config
+      - /opt/tool-compliance-scanning/data:/data
+      - /opt/tool-compliance-scanning/logs:/logs
+EOF
+```
+
+再把本地的 `config/config.yaml` 拷贝到 ECS 的 `/opt/tool-compliance-scanning/config/config.yaml`（可 `scp` 或粘贴），并填写 `ai.glm.api_key`。完成后重新 push 或重跑 Actions 即可。
+
 **步骤二：配置 GitHub 仓库**
 
 1. **Variables（用于开启自动部署）**  

@@ -46,7 +46,12 @@ jobs:
           port: ${{ secrets.ALIYUN_ECS_SSH_PORT || '22' }}
           script: |
             set -e
+            sudo mkdir -p /opt/tool-compliance-scanning/{config,data,logs}
             cd /opt/tool-compliance-scanning
+            if [ ! -f docker-compose.yml ]; then
+              echo "Error: /opt/tool-compliance-scanning/docker-compose.yml not found. Create it on ECS first (see docs/deploy-aliyun.md 5.1)."
+              exit 1
+            fi
             docker login ${{ secrets.ALIYUN_REGISTRY }} -u ${{ secrets.ALIYUN_REGISTRY_USERNAME }} -p ${{ secrets.ALIYUN_REGISTRY_PASSWORD }}
             docker compose pull
             docker compose up -d
