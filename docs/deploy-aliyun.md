@@ -183,7 +183,7 @@ EOF
 再把本地的 `config/config.yaml` 拷贝到 ECS 的 `/opt/tool-compliance-scanning/config/config.yaml`，并填写 `ai.glm.api_key`。**推荐用下面的 scp 方式传文件，避免在终端里粘贴多行内容**（粘贴有误执行、BOM/乱码等风险）。
 
 **将 config.yaml 传到 ECS（推荐，避免粘贴风险）**  
-ECS 通常只允许密钥登录，需用**与 SSH 登录相同的私钥**执行 scp（注意 `host` 与远程路径之间是**冒号**）：
+ECS 通常只允许密钥登录，需用**与 SSH 登录相同的私钥**执行 scp（注意 `host` 与远程路径之间是**冒号**）。也可以在紧急情况下从容器镜像内拷贝示例配置 `/app/config/config-example.yaml` 到宿主机 `config` 目录：
 
 - **在 WSL 中**（将 `你的密钥路径` 换成实际 .pem 路径，如 `~/.ssh/aliyun_ecs.pem`）：
   ```bash
@@ -200,6 +200,16 @@ sudo mv /tmp/config.yaml /opt/tool-compliance-scanning/config/config.yaml
 ```
 
 若本机没有与 ECS 对应的私钥，可到阿里云 ECS 控制台为该实例绑定/创建密钥对，并下载私钥到本机后再用上述 scp。
+
+如需在 ECS 上直接从镜像中恢复示例配置，可在 `/opt/tool-compliance-scanning` 下执行（容器已启动的前提下）：
+
+```bash
+cd /opt/tool-compliance-scanning
+docker cp tool-compliance-scanning:/app/config/config-example.yaml ./config/config.yaml
+dos2unix ./config/config.yaml
+```
+
+然后按上文所述修改 `service.port`、`database.path`、`ai.glm.api_key` 等字段。
 
 **步骤二：配置 GitHub 仓库**
 

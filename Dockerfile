@@ -14,6 +14,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 复制项目代码
 COPY . .
 
+# 复制示例配置，便于在 ECS 上通过 docker cp 获取
+COPY docs/config-example.yaml /app/config/config-example.yaml
+
 # 默认配置路径（可通过环境变量 CONFIG_PATH 覆盖）
 ENV CONFIG_PATH=/app/config/config.yaml
 
