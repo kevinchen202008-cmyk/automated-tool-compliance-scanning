@@ -82,6 +82,9 @@ _bmad-output/*.yaml
 !_bmad-output/planning-artifacts/
 !_bmad-output/planning-artifacts/**/*
 
+# 配置/说明示例（不默认跟踪，按需手动添加）
+docs/config-guide.md
+
 # Reports
 reports/
 *.pdf
