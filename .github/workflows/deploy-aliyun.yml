@@ -49,8 +49,23 @@ jobs:
             sudo mkdir -p /opt/tool-compliance-scanning/{config,data,logs}
             cd /opt/tool-compliance-scanning
             if [ ! -f docker-compose.yml ]; then
-              echo "Error: /opt/tool-compliance-scanning/docker-compose.yml not found. Create it on ECS first (see docs/deploy-aliyun.md 5.1)."
-              exit 1
+              sudo tee docker-compose.yml > /dev/null << 'COMPOSE_EOF'
+            version: "3.9"
+            services:
+              tool-compliance:
+                image: ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_REGISTRY_NAMESPACE }}/${{ secrets.ALIYUN_REGISTRY_REPO }}:latest
+                container_name: tool-compliance-scanning
+                restart: always
+                ports:
+                  - "8080:8080"
+                environment:
+                  - CONFIG_PATH=/config/config.yaml
+                volumes:
+                  - /opt/tool-compliance-scanning/config:/config
+                  - /opt/tool-compliance-scanning/data:/data
+                  - /opt/tool-compliance-scanning/logs:/logs
+            COMPOSE_EOF
+              sudo sed -i 's/^            //' docker-compose.yml
             fi
             docker login ${{ secrets.ALIYUN_REGISTRY }} -u ${{ secrets.ALIYUN_REGISTRY_USERNAME }} -p ${{ secrets.ALIYUN_REGISTRY_PASSWORD }}
             docker compose pull
