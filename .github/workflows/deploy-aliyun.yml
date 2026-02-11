@@ -31,8 +31,9 @@ jobs:
             ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_REGISTRY_NAMESPACE }}/${{ secrets.ALIYUN_REGISTRY_REPO }}:latest
             ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_REGISTRY_NAMESPACE }}/${{ secrets.ALIYUN_REGISTRY_REPO }}:${{ github.sha }}
 
+  # 仅当在仓库 Variables 中设置 ALIYUN_ECS_DEPLOY_ENABLED = true 且配置了 ECS 相关 Secrets 时执行
   deploy-to-ecs:
-    if: ${{ success() }}
+    if: ${{ success() && vars.ALIYUN_ECS_DEPLOY_ENABLED == 'true' }}
     needs: build-and-push-image
     runs-on: ubuntu-latest
     steps:

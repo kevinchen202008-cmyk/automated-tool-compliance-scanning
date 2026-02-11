@@ -80,7 +80,7 @@ docker push registry.cn-hangzhou.aliyuncs.com/your-namespace/tool-compliance-sca
 > `ALIYUN_REGISTRY_NAMESPACE`（命名空间）\
 > `ALIYUN_REGISTRY_REPO`（仓库名，如 `tool-compliance-scanning`）\
 > `ALIYUN_REGISTRY_USERNAME` / `ALIYUN_REGISTRY_PASSWORD`\
-> （如需自动部署到 ECS）`ALIYUN_ECS_HOST`, `ALIYUN_ECS_USER`, `ALIYUN_ECS_SSH_KEY`
+> （如需自动部署到 ECS）见下文 **5.1 自动部署到 ECS 配置步骤**，需配置 `ALIYUN_ECS_HOST`、`ALIYUN_ECS_USER`、`ALIYUN_ECS_SSH_KEY` 及仓库变量 `ALIYUN_ECS_DEPLOY_ENABLED`。
 
 ### 4.1 使用 RAM 用户（子账号）做 CI/CD
 
@@ -113,7 +113,75 @@ docker push registry.cn-hangzhou.aliyuncs.com/your-namespace/tool-compliance-sca
 
 ## 5. ECS 上的运行（Docker Compose 示例）
 
-在 ECS 实例上（建议目录 `/opt/tool-compliance-scanning`）创建 `docker-compose.yml`：
+### 5.1 自动部署到 ECS 配置步骤（解决 “missing server host”）
+
+若镜像已成功推送到 ACR，但 GitHub Actions 中 **deploy-to-ecs** 报错 **“Error: missing server host”**，说明尚未配置 ECS 相关项。按下面步骤配置后，push 到 `main` 时会自动在 ECS 上拉取新镜像并重启服务。
+
+**步骤一：准备 ECS 实例**
+
+1. 在阿里云创建或选用一台 ECS（建议与 ACR 同地域，如新加坡）。
+2. 安装 Docker 与 Docker Compose（若未安装）：
+   ```bash
+   # 以 Ubuntu 为例
+   curl -fsSL https://get.docker.com | sh
+   sudo usermod -aG docker $USER
+   # 安装 Docker Compose 插件或 standalone 版本
+   sudo apt-get update && sudo apt-get install -y docker-compose-plugin
+   ```
+3. 在 ECS 上创建目录并放入配置与编排文件：
+   ```bash
+   sudo mkdir -p /opt/tool-compliance-scanning/{config,data,logs}
+   ```
+4. 在 `/opt/tool-compliance-scanning/docker-compose.yml` 中填写**你的镜像地址**（与 GitHub Secrets 中命名空间/仓库一致），例如新加坡个人版：
+   ```yaml
+   version: "3.9"
+   services:
+     tool-compliance:
+       image: crpi-t12lsuwwuworwsj3.ap-southeast-1.personal.cr.aliyuncs.com/tool-compliance-scan/repo-for-tool-compliance-scan:latest
+       container_name: tool-compliance-scanning
+       restart: always
+       ports:
+         - "8080:8080"
+       environment:
+         - CONFIG_PATH=/config/config.yaml
+       volumes:
+         - /opt/tool-compliance-scanning/config:/config
+         - /opt/tool-compliance-scanning/data:/data
+         - /opt/tool-compliance-scanning/logs:/logs
+   ```
+5. 将 `config/config.yaml` 拷贝到 ECS 的 `/opt/tool-compliance-scanning/config/config.yaml`，并填写 `ai.glm.api_key` 等生产配置。
+6. 在 ECS 上首次拉取并启动（验证能拉镜像、服务正常）：
+   ```bash
+   docker login crpi-t12lsuwwuworwsj3.ap-southeast-1.personal.cr.aliyuncs.com -u <ACR 用户名> -p <ACR 固定密码>
+   cd /opt/tool-compliance-scanning && docker compose pull && docker compose up -d
+   ```
+
+**步骤二：配置 GitHub 仓库**
+
+1. **Variables（用于开启自动部署）**  
+   仓库 **Settings → Secrets and variables → Actions** → **Variables** 页：  
+   新建变量 `ALIYUN_ECS_DEPLOY_ENABLED`，值填 **`true`**。  
+   （未设置或非 `true` 时，workflow 只构建并推送镜像，不执行 ECS 部署，从而避免 “missing server host”。）
+
+2. **Secrets（用于 SSH 与 ACR）**  
+   在同一 **Secrets** 页确保已添加：
+   - `ALIYUN_ECS_HOST`：ECS 公网 IP 或可被 GitHub 访问的域名。
+   - `ALIYUN_ECS_USER`：SSH 登录用户名（如 `root` 或 `ubuntu`）。
+   - `ALIYUN_ECS_SSH_KEY`：ECS 的 SSH 私钥全文（用于 `appleboy/ssh-action` 登录）。
+   - 若 SSH 端口非 22：`ALIYUN_ECS_SSH_PORT`（如 `22`）。
+
+   ACR 相关 Secrets 你已配置（REGISTRY、USERNAME、PASSWORD、NAMESPACE、REPO），无需改动。
+
+**步骤三：验证**
+
+再次 push 到 `main`（或空提交 `git commit --allow-empty -m "ci: trigger deploy" && git push origin main`）。  
+在 **Actions** 中应看到 **build-and-push-image** 与 **deploy-to-ecs** 均成功；ECS 上 `docker compose ps` 应显示容器在运行，访问 `http://<ECS 公网 IP>:8080/ui` 可打开服务。
+
+---
+
+### 5.2 ECS 上 docker-compose 与首次/后续部署
+
+在 ECS 实例上（建议目录 `/opt/tool-compliance-scanning`）创建或使用已有的 `docker-compose.yml`：
 
 ```yaml
 version: "3.9"
