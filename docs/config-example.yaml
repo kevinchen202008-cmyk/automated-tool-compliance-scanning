@@ -1,0 +1,163 @@
+# 工具合规扫描 Agent 服务 - 配置文件示例
+# 复制此文件为 config.yaml 并根据实际情况修改配置
+
+# 服务配置
+service:
+  name: "tool-compliance-scanning-agent"
+  version: "1.0.0"
+  port: 8080
+  host: "0.0.0.0"
+  debug: false
+
+# AI 大模型配置
+ai:
+  # 默认使用 GLM 官方 Open API
+  provider: "glm"  # 可选值: glm, openai, azure, local
+  default_model: "glm-4"
+  
+  # GLM 官方 Open API 配置（默认配置）
+  glm:
+    api_base: "https://open.bigmodel.cn/api/paas/v4"
+    api_key: ""  # 请在此处填入您的 GLM API Key
+    model: "glm-4"
+    temperature: 0.7
+    max_tokens: 2000
+    timeout: 30  # 秒
+    
+  # OpenAI 配置（可选，如需要切换）
+  openai:
+    api_base: "https://api.openai.com/v1"
+    api_key: ""
+    model: "gpt-4"
+    temperature: 0.7
+    max_tokens: 2000
+    timeout: 30
+    
+  # Azure OpenAI 配置（可选）
+  azure:
+    api_base: ""
+    api_key: ""
+    api_version: "2024-02-15-preview"
+    deployment_name: ""
+    model: "gpt-4"
+    temperature: 0.7
+    max_tokens: 2000
+    timeout: 30
+    
+  # 本地模型配置（可选）
+  local:
+    api_base: "http://localhost:11434/v1"
+    api_key: ""
+    model: "llama2"
+    temperature: 0.7
+    max_tokens: 2000
+    timeout: 60
+
+# 合规规则引擎配置
+compliance:
+  # 合规标准
+  standards:
+    - "ISO27001"
+    - "SOC2"
+    - "GDPR"
+    - "等保2.0"
+    - "企业内控标准"
+  
+  # 是否启用多维度合规评估（暂时禁用以提升性能，仅保留TOS分析和替代方案）
+  # 设置为 true 时，将执行完整的多维度评估（安全性、许可证、维护性、性能、TOS）
+  # 设置为 false 时，仅执行TOS分析和替代方案获取，跳过多维度评估
+  enable_multi_dimension_assessment: false
+  
+  # 合规评分权重（当enable_multi_dimension_assessment为true时生效）
+  scoring:
+    security: 0.4      # 安全性权重
+    license: 0.3      # 许可证合规权重
+    maintenance: 0.2  # 维护性权重
+    performance: 0.1  # 性能权重
+  
+  # 合规规则文件路径
+  rules_path: "./rules"
+  
+  # 开源替代建议数据库
+  alternatives_db: "./data/alternatives.json"
+
+# 数据库配置
+database:
+  # SQLite（默认，适合单机部署）
+  type: "sqlite"
+  path: "./data/compliance.db"
+  
+  # MySQL（可选，适合云部署）
+  # type: "mysql"
+  # host: "localhost"
+  # port: 3306
+  # user: "root"
+  # password: ""
+  # database: "compliance_scanning"
+
+# 日志配置
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  format: "json"  # json, text
+  file: "./logs/app.log"
+  max_size: 10  # MB
+  backup_count: 5
+
+# 部署配置
+deployment:
+  # 部署环境: local_wsl, cloud_aliyun, cloud_tencent, cloud_huawei
+  environment: "local_wsl"
+  
+  # WSL 环境配置
+  wsl:
+    base_path: "/mnt/d/Projects/tool compliance scanning agent"
+    
+  # 云平台配置（根据选择的云平台填写）
+  cloud:
+    region: ""
+    instance_type: ""
+    storage_type: ""
+
+# Web 服务配置
+web:
+  # 访问方式: browser_only, api_enabled
+  access_mode: "browser_only"  # MVP阶段仅浏览器访问
+  
+  # CORS 配置
+  cors:
+    enabled: true
+    allowed_origins:
+      - "http://localhost:8080"
+      - "http://127.0.0.1:8080"
+  
+  # 安全配置
+  security:
+    enable_auth: false  # MVP阶段暂不启用认证
+    session_timeout: 3600  # 秒
+
+# 扫描任务配置
+scanning:
+  # 最大并发扫描数
+  max_concurrent: 5
+  
+  # 扫描超时时间（秒）
+  timeout: 300
+  
+  # 重试配置
+  retry:
+    max_attempts: 3
+    backoff_factor: 2  # 指数退避因子
+
+# 报告生成配置
+reporting:
+  # 报告格式
+  formats:
+    - "json"
+    - "html"
+    - "pdf"
+  
+  # 报告保存路径
+  output_path: "./reports"
+  
+  # 报告保留天数
+  retention_days: 90

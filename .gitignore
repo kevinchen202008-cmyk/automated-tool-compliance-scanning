@@ -82,10 +82,6 @@ _bmad-output/*.yaml
 !_bmad-output/planning-artifacts/
 !_bmad-output/planning-artifacts/**/*
 
-# Configuration files
-docs/config-example.yaml
-docs/config-guide.md
-
 # Reports
 reports/
 *.pdf
