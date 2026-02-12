@@ -196,10 +196,10 @@ def batch_create_tools(db: Session, tool_names: list[str], source: str = "unknow
                 tool = get_or_create_tool(db, tool_name, source)
                 tools.append(tool)
         except ValueError as e:
-            errors.append(f"工具 '{tool_name}': {str(e)}")
+            errors.append(f"工具 '{tool_name}': 名称无效")
             logger.warning(f"跳过无效工具名: {tool_name} - {e}")
         except Exception as e:
-            errors.append(f"工具 '{tool_name}': {str(e)}")
+            errors.append(f"工具 '{tool_name}': 创建失败")
             logger.error(f"创建工具失败: {tool_name} - {e}")
     
     if errors:

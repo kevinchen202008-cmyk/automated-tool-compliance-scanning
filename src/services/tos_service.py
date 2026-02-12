@@ -179,6 +179,6 @@ async def get_and_analyze_tos(tool: Tool, db: Session) -> Dict[str, Any]:
             
     except Exception as e:
         logger.error(f"获取和分析TOS失败: {tool.name} - {e}")
-        result["error"] = str(e)
+        result["error"] = "获取和分析TOS失败，请查看服务端日志"
     
     return result

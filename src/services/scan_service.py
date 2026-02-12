@@ -238,9 +238,8 @@ class ScanService:
                 })
                     
             except Exception as e:
-                error_msg = str(e)
-                task.fail(error_msg)
-                logger.error(f"扫描工具失败: {task.tool_name} - {error_msg}")
+                logger.error(f"扫描工具失败: {task.tool_name} - {e}")
+                task.fail("扫描失败，请查看服务端日志")
     
     async def scan_tools(self, tool_ids: List[int], db: Session) -> Dict[int, ScanTask]:
         """

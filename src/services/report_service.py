@@ -231,7 +231,7 @@ class ReportService:
             logger.error(f"准备工具信息库更新信息失败: {tool.name} - {e}")
             return {
                 "available": False,
-                "reason": f"处理失败: {str(e)}"
+                "reason": "处理失败，请查看服务端日志"
             }
     
     def save_json_report(
