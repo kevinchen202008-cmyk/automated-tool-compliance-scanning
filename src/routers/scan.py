@@ -53,7 +53,7 @@ async def start_scan(
         raise
     except Exception as e:
         logger.error(f"启动扫描失败: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"启动扫描失败: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="启动扫描失败，请查看服务端日志")
 
 
 @router.post("/api/v1/compliance/scan", response_model=ScanResponse, status_code=status.HTTP_202_ACCEPTED)
@@ -85,7 +85,7 @@ async def compliance_scan(
         raise
     except Exception as e:
         logger.error(f"一体化合规扫描失败: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"一体化合规扫描失败: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="一体化合规扫描失败，请查看服务端日志")
 
 
 @router.get("/api/v1/scan/status/{tool_id}", response_model=ScanTaskStatusResponse)
@@ -112,7 +112,7 @@ async def get_scan_status(tool_id: int, db: Session = Depends(get_db)):
         raise
     except Exception as e:
         logger.error(f"获取扫描状态失败: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"获取扫描状态失败: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="获取扫描状态失败，请查看服务端日志")
 
 
 # ==================== 报告 ====================
@@ -134,7 +134,7 @@ async def get_report(report_id: int, db: Session = Depends(get_db)):
         raise
     except Exception as e:
         logger.error(f"获取报告失败: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"获取报告失败: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="获取报告失败，请查看服务端日志")
 
 
 @router.get("/api/v1/reports/{report_id}/export")
@@ -154,7 +154,7 @@ async def export_report(report_id: int, db: Session = Depends(get_db)):
         raise
     except Exception as e:
         logger.error(f"导出报告失败: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"导出报告失败: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="导出报告失败，请查看服务端日志")
 
 
 @router.get("/api/v1/reports/{report_id}/kb-diff", response_model=Dict[str, Any])
@@ -185,4 +185,4 @@ async def get_kb_diff_for_report(report_id: int, db: Session = Depends(get_db)):
         raise
     except Exception as e:
         logger.error(f"获取知识库差异对比失败: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"获取知识库差异对比失败: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="获取知识库差异对比失败，请查看服务端日志")

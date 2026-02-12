@@ -38,7 +38,7 @@ async def create_tool(
         logger.error(f"创建工具失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"创建工具失败: {str(e)}",
+            detail="创建工具失败，请查看服务端日志",
         )
 
 
@@ -76,5 +76,5 @@ async def batch_create_tools_endpoint(
         logger.error(f"批量创建工具失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"批量创建工具失败: {str(e)}",
+            detail="批量创建工具失败，请查看服务端日志",
         )

@@ -32,7 +32,7 @@ async def list_knowledge_base_entries(
         }
     except Exception as e:
         logger.error(f"列出知识库条目失败: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"列出知识库条目失败: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="列出知识库条目失败，请查看服务端日志")
 
 
 @router.get("/{tool_name}", response_model=Dict[str, Any])
@@ -49,7 +49,7 @@ async def get_knowledge_base_entry(tool_name: str, db: Session = Depends(get_db)
         raise
     except Exception as e:
         logger.error(f"获取工具信息库条目失败: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"获取工具信息库条目失败: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="获取工具信息库条目失败，请查看服务端日志")
 
 
 @router.get("/{tool_name}/detail", response_model=Dict[str, Any])
@@ -87,7 +87,7 @@ async def get_kb_detail_for_display(tool_name: str, db: Session = Depends(get_db
         raise
     except Exception as e:
         logger.error(f"获取知识库详情失败: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"获取知识库详情失败: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="获取知识库详情失败，请查看服务端日志")
 
 
 @router.put("/{tool_name}", response_model=Dict[str, Any])
@@ -100,7 +100,7 @@ async def update_knowledge_base_entry(tool_name: str, data: Dict[str, Any], db: 
         return {"tool_name": tool_name, "data": knowledge_base_entry_to_dict(entry), "message": "知识库条目已更新"}
     except Exception as e:
         logger.error(f"更新知识库条目失败: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"更新知识库条目失败: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="更新知识库条目失败，请查看服务端日志")
 
 
 @router.delete("/{tool_name}", status_code=status.HTTP_204_NO_CONTENT)
@@ -116,7 +116,7 @@ async def delete_knowledge_base_entry_route(tool_name: str, db: Session = Depend
         raise
     except Exception as e:
         logger.error(f"删除知识库条目失败: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"删除知识库条目失败: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="删除知识库条目失败，请查看服务端日志")
 
 
 @router.post("/{tool_name}/create-from-report", response_model=Dict[str, Any])
@@ -148,7 +148,7 @@ async def create_kb_from_report(
         raise
     except Exception as e:
         logger.error(f"从报告创建知识库失败: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"从报告创建知识库失败: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="从报告创建知识库失败，请查看服务端日志")
 
 
 @router.post("/{tool_name}/update-from-report", response_model=Dict[str, Any])
@@ -176,4 +176,4 @@ async def update_kb_from_report(
         raise
     except Exception as e:
         logger.error(f"从报告更新知识库失败: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"从报告更新知识库失败: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="从报告更新知识库失败，请查看服务端日志")

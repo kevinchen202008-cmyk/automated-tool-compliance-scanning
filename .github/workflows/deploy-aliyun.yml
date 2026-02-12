@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+# 最小权限原则：默认只读代码权限，各 job 按需覆盖
+permissions:
+  contents: read
+
 jobs:
   check-secrets:
     runs-on: ubuntu-latest
