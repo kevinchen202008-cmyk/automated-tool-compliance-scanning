@@ -7,7 +7,7 @@ uvicorn[standard]==0.34.3
 
 # HTTP 客户端（用于 AI API 调用和联网搜索）
 httpx==0.25.1
-requests==2.32.5
+requests==2.32.4
 
 # 配置管理
 pyyaml==6.0.1
