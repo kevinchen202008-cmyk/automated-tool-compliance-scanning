@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from typing import Optional
 from src.config import get_config, load_config
-from src.database import init_database, check_database_exists
+from src.database import init_database, check_database_exists, migrate_database
 from src.logger import setup_logger, get_logger
 
 # 初始化日志系统
@@ -47,16 +47,27 @@ async def api_auth_guard(x_api_key: Optional[str] = Header(None)):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """应用生命周期管理：启动时初始化数据库"""
+    """应用生命周期管理：启动时初始化或迁移数据库"""
     try:
         if not check_database_exists():
             logger.info("数据库不存在，开始初始化...")
             init_database()
             logger.info("数据库初始化完成")
         else:
-            logger.info("数据库已存在，跳过初始化")
+            logger.info("数据库已存在，检查 schema 升级...")
+            result = migrate_database()
+            if result.get("migrated"):
+                logger.info(
+                    f"数据库 schema 已升级: v{result['from_version']} → v{result['to_version']}"
+                )
+                if result.get("backup_path"):
+                    logger.info(f"升级前备份已保存: {result['backup_path']}")
+                if result.get("added_columns"):
+                    logger.info(f"新增列: {', '.join(result['added_columns'])}")
+            else:
+                logger.info("数据库 schema 已是最新版本")
     except Exception as e:
-        logger.error(f"数据库初始化失败: {e}")
+        logger.error(f"数据库初始化/迁移失败: {e}")
         raise
     yield
 
