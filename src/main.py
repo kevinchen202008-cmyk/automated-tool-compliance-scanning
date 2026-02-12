@@ -4,6 +4,7 @@ Main entry point for Tool Compliance Scanning Agent Service
 """
 
 import os
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, status, Header
 from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -44,11 +45,28 @@ async def api_auth_guard(x_api_key: Optional[str] = Header(None)):
         )
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """应用生命周期管理：启动时初始化数据库"""
+    try:
+        if not check_database_exists():
+            logger.info("数据库不存在，开始初始化...")
+            init_database()
+            logger.info("数据库初始化完成")
+        else:
+            logger.info("数据库已存在，跳过初始化")
+    except Exception as e:
+        logger.error(f"数据库初始化失败: {e}")
+        raise
+    yield
+
+
 # 创建 FastAPI 应用
 app = FastAPI(
     title="工具合规扫描 Agent 服务",
     description="基于 AI 的工具合规扫描服务，支持工具合规性评估和报告生成",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 # 挂载静态文件目录
@@ -60,22 +78,6 @@ try:
         app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 except Exception as e:
     logger.warning(f"无法挂载静态文件目录: {e}")
-
-
-# 启动时初始化数据库
-@app.on_event("startup")
-async def startup_event():
-    """应用启动时执行"""
-    try:
-        if not check_database_exists():
-            logger.info("数据库不存在，开始初始化...")
-            init_database()
-            logger.info("数据库初始化完成")
-        else:
-            logger.info("数据库已存在，跳过初始化")
-    except Exception as e:
-        logger.error(f"数据库初始化失败: {e}")
-        raise
 
 
 # ==================== 注册路由模块 ====================
