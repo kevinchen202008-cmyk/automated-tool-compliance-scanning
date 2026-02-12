@@ -27,6 +27,7 @@
     .task-name { font-weight: 500; }
     .task-status { color: var(--muted); font-size: 13px; }
 
+    /* === 扫描结果卡片 === */
     .result-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-top: 20px; }
     .result-card h2 { font-size: 1.25rem; margin: 0 0 20px 0; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
     .result-section { margin-bottom: 20px; }
@@ -40,16 +41,20 @@
     .alt-block h4 { font-size: 14px; margin: 0 0 6px 0; }
     .alt-block .meta { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
     .alt-block .desc { font-size: 13px; line-height: 1.5; }
-    .kb-banner { padding: 10px 12px; border-radius: 8px; border: 1px dashed var(--border); font-size: 13px; margin-top: 8px; }
-    .kb-banner.new { border-color: var(--accent); }
-    .kb-banner.diff { border-color: var(--warn); }
+
+    /* === 数据来源 & 知识库横幅 === */
     .data-source-badge { font-size: 0.75rem; color: var(--muted); margin-bottom: 12px; }
     .data-source-badge span { padding: 2px 8px; border-radius: 4px; background: var(--bg); border: 1px solid var(--border); }
     .data-source-badge.mixed span { border-color: var(--warn); color: var(--warn); }
     .data-source-badge.ai span { border-color: var(--accent); color: var(--accent); }
     .data-source-badge.kb span { color: var(--success); border-color: var(--success); }
+    .kb-banner { padding: 10px 12px; border-radius: 8px; border: 1px dashed var(--border); font-size: 13px; margin-top: 8px; }
+    .kb-banner.new { border-color: var(--accent); }
+    .kb-banner.diff { border-color: var(--warn); }
     .kb-actions { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px; }
     .btn-sm { padding: 6px 10px; font-size: 12px; border-radius: 6px; }
+
+    /* === 工具库浏览 === */
     .kb-browse-card { margin-bottom: 16px; }
     .kb-toolbar { margin-top: 8px; font-size: 13px; display: flex; align-items: center; gap: 8px; color: var(--muted); flex-wrap: wrap; }
     .kb-toolbar select { padding: 4px 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 13px; }
@@ -73,6 +78,8 @@
     .kb-detail-actions { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 10px; }
     .btn-danger { background: var(--danger); color: #fff; }
     .btn-danger:hover { opacity: 0.9; }
+
+    /* === 编辑表单 === */
     .kb-edit-form .form-row { margin-bottom: 12px; }
     .kb-edit-form label { display: block; margin-bottom: 4px; color: var(--muted); font-size: 0.85rem; }
     .kb-edit-form input[type="text"], .kb-edit-form textarea { width: 100%; padding: 8px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 14px; }
@@ -85,26 +92,27 @@
     <h1>工具合规扫描 Agent</h1>
     <p class="sub">默认显示「合规扫描」结果；如需长期维护某个工具的合规信息，可切换到「工具库浏览」进行浏览和编辑。</p>
 
+    <!-- === Tab 切换 === -->
     <div class="tabs">
       <button class="tab active" data-view="scan">合规扫描</button>
       <button class="tab" data-view="kb">工具库浏览</button>
     </div>
 
+    <!-- === 合规扫描视图 === -->
     <div id="viewScan">
       <div class="card">
         <label for="tools">工具名称（每行一个或逗号分隔）</label>
         <textarea id="tools" placeholder="例如：&#10;Docker Desktop&#10;Docker CE&#10;Git"></textarea>
         <button class="btn" id="startBtn">开始扫描</button>
       </div>
-
       <div class="card" id="progressCard" style="display: none;">
         <strong>扫描进展</strong>
         <div id="taskList"></div>
       </div>
-
       <div id="resultContainer"></div>
     </div>
 
+    <!-- === 工具库浏览视图 === -->
     <div id="viewKb" style="display: none;">
       <div class="card kb-browse-card" id="kbBrowseCard">
         <p class="sub" style="margin-bottom:12px;">
@@ -140,9 +148,12 @@
     </div>
   </div>
 
+  <!-- === JS 模块 === -->
+  <script src="/static/js/utils.js"></script>
+  <script src="/static/js/scan.js"></script>
+  <script src="/static/js/kb-browse.js"></script>
   <script>
-    var API_BASE = '';
-    // 视图切换：合规扫描 / 工具信息库
+    // Tab 切换
     (function setupTabs() {
       var scanView = document.getElementById('viewScan');
       var kbView = document.getElementById('viewKb');
@@ -163,630 +174,9 @@
       });
     })();
 
-    function renderResult(report) {
-      var toolName = (report.tool && report.tool.name) || '未知工具';
-      var lic = report.license_info || {};
-      var comp = report.company_info || {};
-      var comm = report.commercial_restrictions || {};
-      var alts = report.alternative_tools || [];
-      var kbUpdate = report.knowledge_base_update || {};
-      var ds = report.data_source || {};
-      var ai = !!ds.ai_analysis;
-      var kb = !!ds.knowledge_base;
-      var sourceLabel = ai && kb ? '混合' : ai ? '本次 AI' : kb ? '工具信息库' : '无';
-      var sourceClass = ai && kb ? 'mixed' : ai ? 'ai' : kb ? 'kb' : '';
-      var sourceHtml = '<div class="data-source-badge' + (sourceClass ? ' ' + sourceClass : '') + '">数据来源：<span>' + escapeHtml(sourceLabel) + '</span></div>';
-
-      var chinaText = comp.china_office ? '<span class="china-yes">√ 有中国分公司或服务</span>' : '无';
-      var needLicense = comm.commercial_license_required === true;
-      var freeCommercial = comm.free_for_commercial === true;
-      var needLicenseHtml = needLicense ? '<span class="no">是</span>' : '<span class="yes">否</span>';
-      var freeCommercialHtml = freeCommercial ? '<span class="yes">是</span>' : '<span class="no">否</span>';
-
-      var altHtml = '';
-      for (var i = 0; i < alts.length; i++) {
-        var a = alts[i];
-        var name = a.name || '未命名';
-        var typeLicense = [a.type, a.license].filter(Boolean).join(' | 许可证: ') || '开源';
-        var adv = a.advantages || '';
-        var scene = a.use_case || a.use_scenario || '';
-        altHtml += '<div class="alt-block"><h4>' + escapeHtml(name) + '</h4>' +
-          '<div class="meta">' + escapeHtml(typeLicense) + '</div>' +
-          (adv ? '<div class="desc"><strong>优势：</strong>' + escapeHtml(adv) + '</div>' : '') +
-          (scene ? '<div class="desc" style="margin-top:6px"><strong>适用场景：</strong>' + escapeHtml(scene) + '</div>' : '') +
-          '</div>';
-      }
-      if (!altHtml) altHtml = '<div class="desc" style="color:var(--muted)">暂无替代方案</div>';
-
-      var kbHtml = '';
-      if (kbUpdate && kbUpdate.available) {
-        if (kbUpdate.action === 'pending_creation') {
-          kbHtml = '<div class="kb-banner new">' +
-            '<div>发现新工具，本次 AI 分析结果尚未写入工具信息库。</div>' +
-            '<div class="kb-actions">' +
-            '<button class="btn btn-sm" data-action="kb-create" data-tool="' + escapeHtml(toolName) + '" data-report-id="' + (report.compliance_report && report.compliance_report.id) + '">将本次结果加入工具信息库</button>' +
-            '<button class="btn btn-sm" data-action="kb-ignore" data-tool="' + escapeHtml(toolName) + '">暂不保存，只查看本次结果</button>' +
-            '</div>' +
-            '</div>';
-        } else if (kbUpdate.action === 'diff_available') {
-          var summary = kbUpdate.summary || ('发现 ' + (kbUpdate.change_count || 0) + ' 处差异');
-          var changes = kbUpdate.changes || [];
-          var changeList = changes.slice(0, 5).map(function(c) {
-            return '<li>' + escapeHtml(c.field_label || c.field || '') + '：' +
-              escapeHtml(String(c.old_value ?? '（原无）')) + ' → ' +
-              escapeHtml(String(c.new_value ?? '（新无）')) + '</li>';
-          }).join('');
-          if (!changeList) changeList = '<li>当前工具信息库记录与本次 AI 分析无显著差异。</li>';
-          kbHtml = '<div class="kb-banner diff">' +
-            '<div>工具信息库中已存在该工具记录。</div>' +
-            '<div style="margin-top:6px;font-size:11px;color:var(--muted)">差异说明：左侧为<strong>工具信息库当前值</strong>，右侧为<strong>本次 AI 分析结果</strong>；（原无）/（新无）表示该侧无值。</div>' +
-            '<div>' + escapeHtml(summary) + '</div>' +
-            '<ul style="margin:6px 0 0 16px;padding:0;font-size:12px;">' + changeList + '</ul>' +
-            (kbUpdate.has_changes ? (
-              '<div class="kb-actions">' +
-              '<button class="btn btn-sm" data-action="kb-update" data-tool="' + escapeHtml(toolName) + '" data-report-id="' + (report.compliance_report && report.compliance_report.id) + '">用本次 AI 结果更新工具信息库差异</button>' +
-              '<button class="btn btn-sm" data-action="kb-keep" data-tool="' + escapeHtml(toolName) + '">保持工具信息库不变</button>' +
-              '</div>'
-            ) : '') +
-            '</div>';
-        }
-      }
-
-      return '<div class="result-card">' +
-        '<h2>' + escapeHtml(toolName) + '</h2>' +
-        sourceHtml +
-        '<div class="result-section">' +
-          '<h3>使用许可/开源协议</h3>' +
-          '<div class="row"><span class="label">类型：</span>' + escapeHtml(lic.license_type || '未知') + '</div>' +
-          '<div class="row"><span class="label">版本：</span>' + escapeHtml(lic.license_version || '—') + '</div>' +
-          '<div class="row"><span class="label">模式：</span>' + escapeHtml(lic.license_mode || '—') + '</div>' +
-        '</div>' +
-        '<div class="result-section">' +
-          '<h3>公司信息</h3>' +
-          '<div class="row"><span class="label">公司名称：</span>' + escapeHtml(comp.company_name || '—') + '</div>' +
-          '<div class="row"><span class="label">所属国家：</span>' + escapeHtml(comp.company_country || '—') + '</div>' +
-          '<div class="row"><span class="label">总部：</span>' + escapeHtml(comp.company_headquarters || '—') + '</div>' +
-          '<div class="row"><span class="label">中国服务：</span>' + chinaText + '</div>' +
-        '</div>' +
-        '<div class="result-section">' +
-          '<h3>商用用户使用限制</h3>' +
-          '<div class="row"><span class="label">需购买License：</span>' + needLicenseHtml + '</div>' +
-          '<div class="row"><span class="label">允许免费商用：</span>' + freeCommercialHtml + '</div>' +
-          (comm.restrictions ? '<div class="row"><span class="label">限制说明：</span>' + escapeHtml(comm.restrictions) + '</div>' : '') +
-          (comm.user_limit ? '<div class="row"><span class="label">用户限制：</span>' + escapeHtml(comm.user_limit) + '</div>' : '') +
-          (comm.feature_restrictions ? '<div class="row"><span class="label">功能限制：</span>' + escapeHtml(comm.feature_restrictions) + '</div>' : '') +
-        '</div>' +
-        '<div class="result-section">' +
-          '<h3>可替代方案</h3>' + altHtml +
-        '</div>' +
-        (kbHtml ? '<div class="result-section">' + kbHtml + '</div>' : '') +
-        '</div>';
-    }
-    function escapeHtml(s) {
-      if (s == null) return '';
-      var div = document.createElement('div');
-      div.textContent = s;
-      return div.innerHTML;
-    }
-    function csvEscape(value) {
-      if (value == null) return '';
-      var s = String(value).replace(/"/g, '""');
-      return /[",\r\n]/.test(s) ? ('"' + s + '"') : s;
-    }
-
-    function renderKbDetail(detail) {
-      if (!detail) return '';
-      var lic = detail.license_info || {};
-      var comp = detail.company_info || {};
-      var comm = detail.commercial_restrictions || {};
-      var alts = detail.alternative_tools || [];
-      var chinaText = comp.china_office ? '<span class="china-yes">√ 有中国分公司或服务</span>' : '无';
-      var needLicense = comm.commercial_license_required === true;
-      var freeCommercial = comm.free_for_commercial === true;
-      var needLicenseHtml = needLicense ? '<span class="no">是</span>' : '<span class="yes">否</span>';
-      var freeCommercialHtml = freeCommercial ? '<span class="yes">是</span>' : '<span class="no">否</span>';
-      var altHtml = '';
-      for (var i = 0; i < alts.length; i++) {
-        var a = alts[i];
-        var name = a.name || '未命名';
-        var typeLicense = [a.type, a.license].filter(Boolean).join(' | 许可证: ') || '开源';
-        var adv = a.advantages || '';
-        var scene = a.use_case || a.use_scenario || '';
-        altHtml += '<div class="alt-block"><h4>' + escapeHtml(name) + '</h4>' +
-          '<div class="meta">' + escapeHtml(typeLicense) + '</div>' +
-          (adv ? '<div class="desc"><strong>优势：</strong>' + escapeHtml(adv) + '</div>' : '') +
-          (scene ? '<div class="desc" style="margin-top:6px"><strong>适用场景：</strong>' + escapeHtml(scene) + '</div>' : '') + '</div>';
-      }
-      if (!altHtml) altHtml = '<div class="desc" style="color:var(--muted)">暂无替代方案</div>';
-      var meta = [];
-      if (detail.source) meta.push('来源: ' + escapeHtml(detail.source));
-      if (detail.updated_at) meta.push('更新: ' + escapeHtml(detail.updated_at));
-      if (detail.updated_by) meta.push('更新人: ' + escapeHtml(detail.updated_by));
-      var metaHtml = meta.length ? '<p class="sub" style="margin-top:12px;font-size:12px;">' + meta.join(' · ') + '</p>' : '';
-      var toolName = detail.tool_name || '';
-      var actionsHtml = '<div class="kb-detail-actions">' +
-        '<button type="button" class="btn btn-sm" data-action="kb-edit" data-tool="' + escapeHtml(toolName) + '">编辑</button>' +
-        '<button type="button" class="btn btn-sm btn-danger" data-action="kb-delete" data-tool="' + escapeHtml(toolName) + '">从工具信息库删除</button>' +
-        '</div>';
-      return '<div class="result-card">' +
-        '<h2>' + escapeHtml(toolName) + ' <span style="font-size:0.75rem;color:var(--muted);font-weight:normal">（工具信息库）</span></h2>' +
-        '<div class="result-section"><h3>使用许可/开源协议</h3>' +
-        '<div class="row"><span class="label">类型：</span>' + escapeHtml(lic.license_type || '未知') + '</div>' +
-        '<div class="row"><span class="label">版本：</span>' + escapeHtml(lic.license_version || '—') + '</div>' +
-        '<div class="row"><span class="label">模式：</span>' + escapeHtml(lic.license_mode || '—') + '</div></div>' +
-        '<div class="result-section"><h3>公司信息</h3>' +
-        '<div class="row"><span class="label">公司名称：</span>' + escapeHtml(comp.company_name || '—') + '</div>' +
-        '<div class="row"><span class="label">所属国家：</span>' + escapeHtml(comp.company_country || '—') + '</div>' +
-        '<div class="row"><span class="label">总部：</span>' + escapeHtml(comp.company_headquarters || '—') + '</div>' +
-        '<div class="row"><span class="label">中国服务：</span>' + chinaText + '</div></div>' +
-        '<div class="result-section"><h3>商用用户使用限制</h3>' +
-        '<div class="row"><span class="label">需购买License：</span>' + needLicenseHtml + '</div>' +
-        '<div class="row"><span class="label">允许免费商用：</span>' + freeCommercialHtml + '</div>' +
-        (comm.restrictions ? '<div class="row"><span class="label">限制说明：</span>' + escapeHtml(comm.restrictions) + '</div>' : '') +
-        (comm.user_limit ? '<div class="row"><span class="label">用户限制：</span>' + escapeHtml(comm.user_limit) + '</div>' : '') +
-        (comm.feature_restrictions ? '<div class="row"><span class="label">功能限制：</span>' + escapeHtml(comm.feature_restrictions) + '</div>' : '') + '</div>' +
-        '<div class="result-section"><h3>可替代方案</h3>' + altHtml + '</div>' +
-        metaHtml + actionsHtml + '</div>';
-    }
-
-    function renderKbEditForm(toolName, data) {
-      var d = data || {};
-      var lic = d.license_type != null ? String(d.license_type) : '';
-      var licVer = d.license_version != null ? String(d.license_version) : '';
-      var licMode = d.license_mode != null ? String(d.license_mode) : '';
-      var company = d.company_name != null ? String(d.company_name) : '';
-      var country = d.company_country != null ? String(d.company_country) : '';
-      var hq = d.company_headquarters != null ? String(d.company_headquarters) : '';
-      var china = d.china_office === true || d.china_office === 'true';
-      var needLic = d.commercial_license_required === true || d.commercial_license_required === 'true';
-      var freeComm = d.free_for_commercial === true || d.free_for_commercial === 'true';
-      var restr = d.commercial_restrictions != null ? String(d.commercial_restrictions) : '';
-      var userLimit = d.user_limit != null ? String(d.user_limit) : '';
-      var featRestr = d.feature_restrictions != null ? String(d.feature_restrictions) : '';
-      var alts = d.alternative_tools;
-      var altsStr = Array.isArray(alts) ? JSON.stringify(alts, null, 2) : (alts != null ? String(alts) : '[]');
-      return '<div class="result-card" id="kbEditFormCard">' +
-        '<h2>' + escapeHtml(toolName) + ' <span style="font-size:0.75rem;color:var(--muted)">（编辑）</span></h2>' +
-        '<form class="kb-edit-form" id="kbEditForm" data-tool="' + escapeHtml(toolName) + '">' +
-        '<div class="result-section"><h3>使用许可/开源协议</h3>' +
-        '<div class="form-row"><label>类型</label><input type="text" name="license_type" value="' + escapeHtml(lic) + '"></div>' +
-        '<div class="form-row"><label>版本</label><input type="text" name="license_version" value="' + escapeHtml(licVer) + '"></div>' +
-        '<div class="form-row"><label>模式</label><input type="text" name="license_mode" value="' + escapeHtml(licMode) + '"></div>' +
-        '</div>' +
-        '<div class="result-section"><h3>公司信息</h3>' +
-        '<div class="form-row"><label>公司名称</label><input type="text" name="company_name" value="' + escapeHtml(company) + '"></div>' +
-        '<div class="form-row"><label>所属国家</label><input type="text" name="company_country" value="' + escapeHtml(country) + '"></div>' +
-        '<div class="form-row"><label>总部</label><input type="text" name="company_headquarters" value="' + escapeHtml(hq) + '"></div>' +
-        '<div class="form-row"><label><input type="checkbox" name="china_office" ' + (china ? 'checked' : '') + '> 有中国分公司或服务</label></div>' +
-        '</div>' +
-        '<div class="result-section"><h3>商用限制</h3>' +
-        '<div class="form-row"><label><input type="checkbox" name="commercial_license_required" ' + (needLic ? 'checked' : '') + '> 需购买 License</label></div>' +
-        '<div class="form-row"><label><input type="checkbox" name="free_for_commercial" ' + (freeComm ? 'checked' : '') + '> 允许免费商用</label></div>' +
-        '<div class="form-row"><label>限制说明</label><input type="text" name="commercial_restrictions" value="' + escapeHtml(restr) + '"></div>' +
-        '<div class="form-row"><label>用户限制</label><input type="text" name="user_limit" value="' + escapeHtml(userLimit) + '"></div>' +
-        '<div class="form-row"><label>功能限制</label><input type="text" name="feature_restrictions" value="' + escapeHtml(featRestr) + '"></div>' +
-        '</div>' +
-        '<div class="result-section"><h3>可替代方案（JSON 数组）</h3>' +
-        '<div class="form-row"><label>alternative_tools</label><textarea name="alternative_tools">' + escapeHtml(altsStr) + '</textarea></div>' +
-        '</div>' +
-        '<div class="kb-detail-actions">' +
-        '<button type="submit" class="btn btn-sm">保存</button>' +
-        '<button type="button" class="btn btn-sm" data-action="kb-cancel-edit" data-tool="' + escapeHtml(toolName) + '">取消</button>' +
-        '</div></form></div>';
-    }
-
-    var kbEntriesCache = [];
-    var kbFilteredEntries = [];
-    var kbSelectedTool = null;
-    var kbEditFullData = null;
-    var kbOrderBy = 'tool_name';
-    var kbLicenseFilter = 'all';
-
-    async function loadKbDetail(toolName) {
-      var detailEl = document.getElementById('kbDetail');
-      if (!toolName) {
-        detailEl.innerHTML = '<p class="task-status" style="padding:16px">请从左侧选择工具</p>';
-        return;
-      }
-      detailEl.innerHTML = '<span class="task-status">加载中…</span>';
-      try {
-        var res = await fetch(API_BASE + '/api/v1/knowledge-base/' + encodeURIComponent(toolName) + '/detail');
-        if (!res.ok) throw new Error('加载详情失败: ' + (await res.text()) || res.status);
-        var detail = await res.json();
-        detailEl.innerHTML = renderKbDetail(detail);
-      } catch (e) {
-        detailEl.innerHTML = '<span style="color:var(--danger)">' + escapeHtml(e.message) + '</span>';
-      }
-    }
-
-    function applyKbFilter() {
-      var q = document.getElementById('kbSearch').value.trim().toLowerCase();
-      var type = kbLicenseFilter;
-      kbFilteredEntries = kbEntriesCache.filter(function(e) {
-        var name = (e.tool_name || '').toLowerCase();
-        if (q && name.indexOf(q) === -1) return false;
-        if (type === 'all') return true;
-        var lic = (e.data && e.data.license_type) ? e.data.license_type : '';
-        var cat = kbLicenseCategory(lic);
-        if (type === 'open') return cat === 'open';
-        if (type === 'commercial') return cat === 'commercial';
-        if (type === 'other') return cat === 'other';
-        return true;
-      });
-    }
-
-    function kbLicenseCategory(lic) {
-      if (!lic || typeof lic !== 'string') return '';
-      var s = lic.toLowerCase();
-      var openKeys = ['apache', 'mit', 'gpl', 'bsd', 'lgpl', 'mpl', '开源', 'open source', 'oss', 'mozilla', 'eclipse', 'agpl', 'cc0', 'creative commons'];
-      var commercialKeys = ['商业', '企业', 'commercial', '付费', '专有', 'proprietary', 'enterprise', 'subscription', '许可'];
-      for (var i = 0; i < openKeys.length; i++) { if (s.indexOf(openKeys[i]) !== -1) return 'open'; }
-      for (var j = 0; j < commercialKeys.length; j++) { if (s.indexOf(commercialKeys[j]) !== -1) return 'commercial'; }
-      return 'other';
-    }
-
-    function licenseColorClass(lic) {
-      var cat = kbLicenseCategory(lic);
-      if (cat === 'open') return 'license-open';
-      if (cat === 'commercial') return 'license-commercial';
-      return '';
-    }
-
-    function renderKbList() {
-      var listEl = document.getElementById('kbList');
-      var entries = kbFilteredEntries;
-      if (!entries.length) {
-        listEl.innerHTML = '<span class="task-status">' + (kbEntriesCache.length ? '无匹配项' : '暂无工具信息库条目') + '</span>';
-        return;
-      }
-      listEl.innerHTML = entries.map(function(e) {
-        var rawName = e.tool_name || '';
-        var name = rawName.trim() || '（未命名）';
-        var lic = (e.data && e.data.license_type) ? e.data.license_type : '';
-        var active = rawName === kbSelectedTool ? ' active' : '';
-        var licClass = licenseColorClass(lic);
-        var licHtml = lic ? '<span class="kb-list-license ' + licClass + '" title="许可/协议">' + escapeHtml(lic) + '</span>' : '';
-        return '<button type="button" class="kb-list-item' + active + '" data-tool="' + escapeHtml(rawName) + '">' +
-          '<span class="kb-list-name">' + escapeHtml(name) + '</span>' + licHtml + '</button>';
-      }).join('');
-    }
-
-    document.getElementById('kbLoadListBtn').onclick = async function() {
-      var btn = this;
-      var panel = document.getElementById('kbPanel');
-      var listEl = document.getElementById('kbList');
-      var detailEl = document.getElementById('kbDetail');
-      btn.disabled = true;
-      listEl.innerHTML = '<span class="task-status">加载中…</span>';
-      detailEl.innerHTML = '';
-      try {
-        var res = await fetch(API_BASE + '/api/v1/knowledge-base?limit=1000&order_by=' + encodeURIComponent(kbOrderBy));
-        if (!res.ok) throw new Error('加载列表失败: ' + (await res.text()) || res.status);
-        var data = await res.json();
-        kbEntriesCache = data.entries || [];
-        document.getElementById('kbSearch').value = '';
-        applyKbFilter();
-        panel.style.display = 'flex';
-        renderKbList();
-        if (kbFilteredEntries.length > 0) {
-          kbSelectedTool = kbFilteredEntries[0].tool_name;
-          renderKbList();
-          await loadKbDetail(kbSelectedTool);
-        } else {
-          kbSelectedTool = null;
-          detailEl.innerHTML = '<p class="task-status" style="padding:16px">暂无工具信息库条目</p>';
-        }
-      } catch (e) {
-        listEl.innerHTML = '<span style="color:var(--danger)">' + escapeHtml(e.message) + '</span>';
-      }
-      btn.disabled = false;
-    };
-
-    document.getElementById('kbSearch').oninput = function() {
-      applyKbFilter();
-      renderKbList();
-      var stillInList = kbFilteredEntries.some(function(e) { return e.tool_name === kbSelectedTool; });
-      if (!stillInList && kbFilteredEntries.length > 0) {
-        kbSelectedTool = kbFilteredEntries[0].tool_name;
-        renderKbList();
-        loadKbDetail(kbSelectedTool);
-      } else if (!stillInList) {
-        kbSelectedTool = null;
-        loadKbDetail(null);
-      }
-    };
-
-    document.getElementById('kbLicenseFilter').onchange = function() {
-      kbLicenseFilter = this.value || 'all';
-      applyKbFilter();
-      renderKbList();
-      var stillInList = kbFilteredEntries.some(function(e) { return e.tool_name === kbSelectedTool; });
-      if (!stillInList && kbFilteredEntries.length > 0) {
-        kbSelectedTool = kbFilteredEntries[0].tool_name;
-        renderKbList();
-        loadKbDetail(kbSelectedTool);
-      } else if (!stillInList) {
-        kbSelectedTool = null;
-        loadKbDetail(null);
-      }
-    };
-
-    document.getElementById('kbList').addEventListener('click', async function(evt) {
-      var btn = evt.target.closest('.kb-list-item');
-      if (!btn) return;
-      var toolName = btn.getAttribute('data-tool');
-      if (!toolName) return;
-      kbSelectedTool = toolName;
-      renderKbList();
-      await loadKbDetail(toolName);
-    });
-
-    document.getElementById('kbOrder').onchange = function() {
-      kbOrderBy = this.value || 'tool_name';
-      document.getElementById('kbLoadListBtn').click();
-    };
-
-    async function handleKbAction(action, toolName, reportId, btn) {
-      try {
-        if (action === 'kb-create') {
-          btn.disabled = true;
-          var res = await fetch(API_BASE + '/api/v1/knowledge-base/' + encodeURIComponent(toolName) + '/create-from-report?report_id=' + encodeURIComponent(reportId), {
-            method: 'POST'
-          });
-          if (!res.ok) throw new Error('加入工具信息库失败: ' + (await res.text()) || res.status);
-          btn.textContent = '已加入工具信息库';
-        } else if (action === 'kb-update') {
-          btn.disabled = true;
-          var res2 = await fetch(API_BASE + '/api/v1/knowledge-base/' + encodeURIComponent(toolName) + '/update-from-report?report_id=' + encodeURIComponent(reportId), {
-            method: 'POST'
-          });
-          if (!res2.ok) throw new Error('更新工具信息库失败: ' + (await res2.text()) || res2.status);
-          btn.textContent = '工具信息库已更新';
-        } else if (action === 'kb-ignore' || action === 'kb-keep') {
-          // 前端仅标记为已忽略/保持现状，不调用后端
-          btn.textContent = action === 'kb-ignore' ? '已选择暂不保存' : '已选择保持不变';
-          btn.disabled = true;
-        }
-      } catch (e) {
-        alert(e.message || e);
-        btn.disabled = false;
-      }
-    }
-
-    async function deleteKbTool(toolName, btn) {
-      if (!toolName) return;
-      if (!confirm('确定从工具信息库中删除「' + toolName + '」？删除后不可恢复。')) return;
-      if (btn) btn.disabled = true;
-      try {
-        var res = await fetch(API_BASE + '/api/v1/knowledge-base/' + encodeURIComponent(toolName), { method: 'DELETE' });
-        if (!res.ok) throw new Error('删除失败: ' + (await res.text()) || res.status);
-        kbEntriesCache = kbEntriesCache.filter(function(e) { return (e.tool_name || '') !== toolName; });
-        applyKbFilter();
-        if (kbSelectedTool === toolName) {
-          kbSelectedTool = kbFilteredEntries.length > 0 ? kbFilteredEntries[0].tool_name : null;
-          renderKbList();
-          await loadKbDetail(kbSelectedTool);
-        } else {
-          renderKbList();
-        }
-      } catch (e) {
-        alert(e.message || e);
-      }
-      if (btn) btn.disabled = false;
-    }
-
-    document.addEventListener('click', function (evt) {
-      var target = evt.target.closest('[data-action]');
-      if (!target) return;
-      var action = target.getAttribute('data-action');
-      if (!/^kb-/.test(action)) return;
-      var tool = target.getAttribute('data-tool');
-      var reportId = target.getAttribute('data-report-id');
-      if (action === 'kb-delete') {
-        deleteKbTool(tool, target);
-        return;
-      }
-      if (action === 'kb-edit') {
-        evt.preventDefault();
-        (async function() {
-          var detailEl = document.getElementById('kbDetail');
-          detailEl.innerHTML = '<span class="task-status">加载中…</span>';
-          try {
-            var res = await fetch(API_BASE + '/api/v1/knowledge-base/' + encodeURIComponent(tool));
-            if (!res.ok) throw new Error('加载失败: ' + (await res.text()) || res.status);
-            var json = await res.json();
-            kbEditFullData = json.data || {};
-            detailEl.innerHTML = renderKbEditForm(json.tool_name, kbEditFullData);
-          } catch (e) {
-            detailEl.innerHTML = '<span style="color:var(--danger)">' + escapeHtml(e.message) + '</span>';
-          }
-        })();
-        return;
-      }
-      if (action === 'kb-cancel-edit') {
-        loadKbDetail(tool);
-        return;
-      }
-      handleKbAction(action, tool, reportId, target);
-    });
-
-    document.addEventListener('submit', function (evt) {
-      if (evt.target.id !== 'kbEditForm') return;
-      evt.preventDefault();
-      var form = evt.target;
-      var toolName = form.getAttribute('data-tool');
-      if (!toolName) return;
-      var formData = {
-        license_type: form.license_type.value.trim() || null,
-        license_version: form.license_version.value.trim() || null,
-        license_mode: form.license_mode.value.trim() || null,
-        company_name: form.company_name.value.trim() || null,
-        company_country: form.company_country.value.trim() || null,
-        company_headquarters: form.company_headquarters.value.trim() || null,
-        china_office: form.china_office.checked,
-        commercial_license_required: form.commercial_license_required.checked,
-        free_for_commercial: form.free_for_commercial.checked,
-        commercial_restrictions: form.commercial_restrictions.value.trim() || null,
-        user_limit: form.user_limit.value.trim() || null,
-        feature_restrictions: form.feature_restrictions.value.trim() || null
-      };
-      try {
-        var altsStr = form.alternative_tools.value.trim();
-        formData.alternative_tools = altsStr ? JSON.parse(altsStr) : [];
-      } catch (_) {
-        alert('可替代方案请输入合法 JSON 数组');
-        return;
-      }
-      var data = Object.assign({}, kbEditFullData || {}, formData);
-      (async function() {
-        var btn = form.querySelector('button[type="submit"]');
-        if (btn) btn.disabled = true;
-        try {
-          var res = await fetch(API_BASE + '/api/v1/knowledge-base/' + encodeURIComponent(toolName), {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-          });
-          if (!res.ok) throw new Error('保存失败: ' + (await res.text()) || res.status);
-          var idx = kbEntriesCache.findIndex(function(e) { return (e.tool_name || '') === toolName; });
-          if (idx >= 0) kbEntriesCache[idx].data = data;
-          renderKbList();
-          await loadKbDetail(toolName);
-        } catch (e) {
-          alert(e.message || e);
-        }
-        if (btn) btn.disabled = false;
-      })();
-    });
-
-    document.getElementById('kbExportBtn').onclick = function() {
-      if (!kbEntriesCache.length) {
-        alert('请先加载工具信息库列表，再执行导出。');
-        return;
-      }
-      var rows = [];
-      rows.push(['工具名称', '许可/协议类型', '许可模式', '公司名称', '所属国家/地区', '最近更新时间']);
-      var list = kbFilteredEntries.length ? kbFilteredEntries : kbEntriesCache;
-      list.forEach(function(e) {
-        var name = e.tool_name || '';
-        var data = e.data || {};
-        var licType = data.license_type || '';
-        var licMode = data.license_mode || '';
-        var company = data.company_name || '';
-        var country = data.company_country || '';
-        var updatedAt = e.updated_at || (data.updated_at || '');
-        rows.push([name, licType, licMode, company, country, updatedAt]);
-      });
-      var csv = rows.map(function(row) {
-        return row.map(csvEscape).join(',');
-      }).join('\r\n');
-      var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement('a');
-      a.href = url;
-      a.download = 'tool-knowledge-base-list.csv';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(function() {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 1000);
-    };
-
-    document.getElementById('startBtn').onclick = async function() {
-      var raw = document.getElementById('tools').value.trim();
-      if (!raw) { alert('请输入至少一个工具名称'); return; }
-      var tools = raw.split(/[\n,]+/).map(function(s) { return s.trim(); }).filter(Boolean);
-      if (!tools.length) { alert('请输入至少一个工具名称'); return; }
-
-      var btn = this;
-      btn.disabled = true;
-      document.getElementById('progressCard').style.display = 'block';
-      document.getElementById('taskList').innerHTML = '';
-      document.getElementById('resultContainer').innerHTML = '';
-
-      try {
-        var batchRes = await fetch(API_BASE + '/api/v1/tools/batch', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tools: tools })
-        });
-        if (!batchRes.ok) throw new Error('创建工具失败: ' + (await batchRes.text()) || batchRes.status);
-        var batch = await batchRes.json();
-        var toolIds = batch.tools.map(function(t) { return t.id; });
-
-        var scanRes = await fetch(API_BASE + '/api/v1/scan/start', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tool_ids: toolIds })
-        });
-        if (!scanRes.ok) throw new Error('启动扫描失败: ' + (await scanRes.text()) || scanRes.status);
-        var scan = await scanRes.json();
-        var tasks = scan.tasks || [];
-        var reportIds = {};
-        var fetchedReports = {};
-
-        function renderTasks() {
-          document.getElementById('taskList').innerHTML = tasks.map(function(t) {
-            var statusText = t.status === 'completed' ? '已完成' : t.status === 'failed' ? '失败' : '扫描中...';
-            return '<div class="task-item ' + (t.status === 'completed' ? 'done' : t.status === 'failed' ? 'error' : 'pending') + '">' +
-              '<span class="task-name">' + escapeHtml(t.tool_name) + '</span>' +
-              '<span class="task-status">' + statusText + '</span>' +
-              '</div>';
-          }).join('');
-        }
-        renderTasks();
-
-        var doneCount = 0;
-        var interval = setInterval(async function() {
-          for (var i = 0; i < tasks.length; i++) {
-            var t = tasks[i];
-            if (t.status === 'completed' || t.status === 'failed') continue;
-            try {
-              var stRes = await fetch(API_BASE + '/api/v1/scan/status/' + t.tool_id);
-              if (!stRes.ok) continue;
-              var st = await stRes.json();
-              t.status = st.status;
-              if (st.result && st.result.report_id) reportIds[t.tool_id] = st.result.report_id;
-              if (t.status === 'completed') doneCount++;
-              if (t.status === 'failed') doneCount++;
-            } catch (_) {}
-          }
-          renderTasks();
-
-          for (var tid in reportIds) {
-            if (fetchedReports[tid]) continue;
-            var rid = reportIds[tid];
-            try {
-              var rRes = await fetch(API_BASE + '/api/v1/reports/' + rid);
-              if (!rRes.ok) continue;
-              var report = await rRes.json();
-              fetchedReports[tid] = true;
-              var container = document.getElementById('resultContainer');
-              container.insertAdjacentHTML('beforeend', renderResult(report));
-            } catch (_) {}
-          }
-
-          if (doneCount >= tasks.length) {
-            clearInterval(interval);
-            for (var tid2 in reportIds) {
-              if (fetchedReports[tid2]) continue;
-              var rid2 = reportIds[tid2];
-              try {
-                var rRes2 = await fetch(API_BASE + '/api/v1/reports/' + rid2);
-                if (!rRes2.ok) continue;
-                var report2 = await rRes2.json();
-                document.getElementById('resultContainer').insertAdjacentHTML('beforeend', renderResult(report2));
-              } catch (_) {}
-              fetchedReports[tid2] = true;
-            }
-          }
-        }, 2000);
-      } catch (e) {
-        document.getElementById('taskList').innerHTML = '<div class="task-item error">错误: ' + escapeHtml(e.message) + '</div>';
-      }
-      btn.disabled = false;
-    };
+    // 初始化各模块
+    initScan();
+    initKbBrowse();
   </script>
 </body>
 </html>

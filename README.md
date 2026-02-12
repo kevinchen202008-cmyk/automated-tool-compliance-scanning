@@ -31,10 +31,13 @@
 │   └── implementation-artifacts/  # 实现产物
 ├── src/                      # 源代码目录
 │   ├── __init__.py
-│   ├── main.py              # FastAPI 应用入口（REST API + Web UI）
+│   ├── main.py              # FastAPI 应用入口
+│   ├── routers/             # 按领域拆分的路由模块
 │   ├── services/            # 合规扫描、工具信息库、报告等业务服务
-│   └── static/              # 前端单页 Web UI（合规扫描 + 工具库浏览）
-├── tests/                    # 测试目录
+│   └── static/              # 前端 Web UI（HTML + 拆分的 JS 模块）
+│       ├── index.html
+│       └── js/              # utils.js / scan.js / kb-browse.js
+├── tests/                    # 测试目录（含 API 接口、服务层单元测试）
 ├── config/                   # 配置文件目录（运行时挂载）
 ├── logs/                     # 日志目录（本地/容器挂载）
 ├── data/                     # 数据存储目录（SQLite 等）
@@ -43,10 +46,11 @@
 │   ├── architecture.md      # 当前架构设计文档
 │   ├── delivery/            # 阶段性交付文档（如 architecture-v0.5.md）
 │   ├── deploy-aliyun.md     # 阿里云部署指南（ACR + ECS + GitHub Actions）
-│   └── config-example.yaml  # 通用配置示例（镜像内打包为 /app/config/config-example.yaml）
+│   ├── config-example.yaml  # 通用配置示例
+│   └── archive/             # 历史过程性文档（已归档）
 ├── .github/workflows/
-│   └── deploy-aliyun.yml    # Push 到 main 自动构建镜像并部署到阿里云 ECS
-├── Dockerfile               # Docker 镜像构建脚本（python:3.10-slim + start_server.py）
+│   └── deploy-aliyun.yml    # CI/CD：测试 → 构建镜像 → 部署到阿里云 ECS
+├── Dockerfile               # Docker 镜像构建脚本
 ├── requirements.txt         # Python 依赖
 └── README.md                # 本文件
 ```
@@ -166,12 +170,19 @@ python start_server.py
 3. **解决方案阶段**：完成 v0.5 / v0.6 架构与交付文档（见 `docs/delivery/`）✅  
 4. **实现阶段**：持续迭代合规扫描、工具库、部署与运维能力（进行中） ✅
 
+## 安全须知
+
+> `config/config.yaml` 包含 GLM API Key 等敏感信息，**已在 `.gitignore` 中忽略，禁止提交到 Git**。  
+> CI 中含 `check-secrets` 步骤，若检测到误提交配置文件会自动中断流水线。  
+> 详见 [部署文档 § 安全](./docs/deploy-aliyun.md#8-安全禁止提交配置与密钥)。
+
 ## 文档
 
 - [产品需求文档](./docs/prd.md)
 - [架构设计文档](./docs/architecture.md)
 - [配置指南](./docs/config-guide.md)
 - [阿里云部署指南](./docs/deploy-aliyun.md)
+- [可维护性分析](./docs/maintainability-analysis.md)
 - [v0.5 架构交付文档](./docs/delivery/architecture-v0.5.md)
 - [Epics 和 Stories](./_bmad-output/planning-artifacts/epics.md)
 

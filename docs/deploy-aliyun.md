@@ -313,3 +313,26 @@ docker compose -f /opt/tool-compliance-scanning/docker-compose.yml up -d
   - `database` 段可按需切换为云 MySQL 或继续使用 SQLite 文件卷挂载。\n
 - 日志与数据目录建议挂载到 ECS 主机（或云盘），避免容器销毁导致数据丢失。
 
+---
+
+## 8. 安全：禁止提交配置与密钥
+
+> **重要**：以下文件/目录包含敏感信息，**严禁**提交到 Git 仓库。
+
+| 文件/目录 | 说明 |
+|-----------|------|
+| `config/config.yaml` | 包含 GLM API Key、数据库密码等 |
+| `.env` / `*.env` | 环境变量文件（如有） |
+| `credentials.json` 等 | 任何云服务凭据文件 |
+
+### 已有保护措施
+
+1. `.gitignore` 已忽略 `config/config.yaml`；
+2. CI 中新增 `check-secrets` 步骤，在构建前检测是否误提交配置文件，若检测到将中断流水线。
+
+### 操作指南
+
+- 本地开发时，从 `docs/config-example.yaml` 复制后修改，**不要** `git add config/config.yaml`；
+- 云环境使用 `scp` 或 `docker cp` 单独上传配置文件，或通过环境变量注入敏感项（如 `AI_GLM_API_KEY`）；
+- 若 GitHub Actions 需要访问密钥，请在仓库 **Settings → Secrets** 中配置，**绝不**写入 workflow 文件。
+
