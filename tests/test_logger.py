@@ -12,7 +12,8 @@ from src.logger import (
     setup_logger,
     get_logger,
     mask_sensitive_info,
-    SensitiveFilter
+    SensitiveFilter,
+    sensitive_format_plain,
 )
 
 
@@ -43,23 +44,28 @@ def test_mask_sensitive_info():
 
 
 def test_sensitive_filter():
-    """测试敏感信息过滤器"""
+    """测试 SensitiveFilter 始终返回 True（允许记录）"""
     filter_obj = SensitiveFilter()
-    
-    # 创建模拟的日志记录
-    class MockRecord:
-        def __init__(self, message):
-            self.message = message
-    
-    record1 = MockRecord('api_key: "secret123"')
-    result1 = filter_obj(record1)
-    assert result1 is True
-    assert "secret123" not in str(record1.message)
-    
-    record2 = MockRecord("普通消息")
-    result2 = filter_obj(record2)
-    assert result2 is True
-    assert record2.message == "普通消息"
+
+    record1 = {"message": 'api_key: "secret123"'}
+    assert filter_obj(record1) is True
+
+    record2 = {"message": "普通消息"}
+    assert filter_obj(record2) is True
+
+
+def test_sensitive_format_plain():
+    """测试 sensitive_format_plain 对敏感信息的脱敏"""
+    # 模拟 loguru record（只需 message 和 extra 字段）
+    record = {"message": 'api_key: "secret123"', "extra": {}}
+    fmt = sensitive_format_plain(record)
+    # format 函数返回格式模板，脱敏后的值存入 extra._masked_msg
+    assert "secret123" not in record["extra"]["_masked_msg"]
+    assert "***" in record["extra"]["_masked_msg"]
+
+    record2 = {"message": "普通消息", "extra": {}}
+    sensitive_format_plain(record2)
+    assert record2["extra"]["_masked_msg"] == "普通消息"
 
 
 def test_logger_initialization(tmp_path):
@@ -116,26 +122,25 @@ def test_logger_sensitive_info_filtering(tmp_path):
     """测试日志中的敏感信息过滤"""
     # 创建临时日志文件
     log_file = tmp_path / "test_sensitive.log"
-    
+
     # 移除所有现有的 handlers
     logger.remove()
-    
-    # 添加带敏感信息过滤器的 handler
+
+    # 使用 sensitive_format_plain（loguru format 函数）实现脱敏
     logger.add(
         str(log_file),
-        format="{message}",
+        format=sensitive_format_plain,
         level="DEBUG",
-        filter=SensitiveFilter()
     )
-    
+
     # 记录包含敏感信息的日志
     logger.info('api_key: "sk-1234567890"')
     logger.info('password: "mypassword"')
     logger.info("普通消息，不包含敏感信息")
-    
+
     # 读取日志文件
     log_content = log_file.read_text(encoding="utf-8")
-    
+
     # 验证敏感信息被屏蔽
     assert "sk-1234567890" not in log_content
     assert "mypassword" not in log_content

@@ -19,25 +19,34 @@ from src.models import Tool, ComplianceReport, AlternativeTool, Base
 from src.config import reload_config, AppConfig, DatabaseConfig
 
 
-def test_init_database(tmp_path):
+def test_init_database(tmp_path, monkeypatch):
     """测试数据库初始化"""
+    import src.database as db_mod
+
     # 创建临时数据库路径
     db_path = tmp_path / "test.db"
-    
-    # 创建临时配置
+
+    # 创建临时配置并注入到全局
     config = AppConfig(
         database=DatabaseConfig(
             type="sqlite",
             path=str(db_path)
         )
     )
-    
-    # 重新加载配置（使用临时路径）
-    # 注意：这里需要修改全局配置，实际测试中可能需要 mock
+    monkeypatch.setattr("src.database.get_config", lambda: config)
+
+    # 重置全局引擎/会话，使其使用新配置
+    db_mod._engine = None
+    db_mod._SessionLocal = None
+
     init_database()
-    
+
     # 检查数据库文件是否创建
     assert db_path.exists()
+
+    # 清理全局状态，避免影响其它测试
+    db_mod._engine = None
+    db_mod._SessionLocal = None
 
 
 def test_create_tables(tmp_path):

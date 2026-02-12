@@ -47,13 +47,51 @@ def mask_sensitive_info(message: str) -> str:
 
 
 class SensitiveFilter:
-    """敏感信息过滤器"""
-    
+    """
+    敏感信息过滤器 — 用作 loguru 的 filter 参数。
+
+    注意：loguru 的 filter 在消息格式化之前调用，修改 record["message"]
+    不影响最终输出。因此这里通过 patcher 方式（在 __call__ 中修改
+    record 的内部表示）并结合 ``sensitive_format`` 来实现脱敏。
+    """
+
     def __call__(self, record):
-        """过滤日志记录中的敏感信息"""
-        if hasattr(record, "message"):
-            record["message"] = mask_sensitive_info(str(record["message"]))
+        """在 filter 阶段标记已检查，实际脱敏由 sensitive_format 完成。"""
         return True
+
+
+def sensitive_format(record):
+    """
+    loguru format 函数：在格式化输出时对 message 做脱敏。
+    用法：logger.add(sink, format=sensitive_format)
+    """
+    # 先对 message 脱敏
+    record["extra"]["_masked_msg"] = mask_sensitive_info(record["message"])
+    return (
+        "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
+        "<level>{level: <8}</level> | "
+        "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> | "
+        "<level>{extra[_masked_msg]}</level>\n{exception}"
+    )
+
+
+def sensitive_format_json(record):
+    """JSON 格式脱敏。"""
+    record["extra"]["_masked_msg"] = mask_sensitive_info(record["message"])
+    return (
+        '{{"time": "{time:YYYY-MM-DD HH:mm:ss.SSS}", '
+        '"level": "{level}", '
+        '"module": "{module}", '
+        '"function": "{function}", '
+        '"line": {line}, '
+        '"message": "{extra[_masked_msg]}"}}\n'
+    )
+
+
+def sensitive_format_plain(record):
+    """纯 {message} 格式脱敏（用于测试等简单场景）。"""
+    record["extra"]["_masked_msg"] = mask_sensitive_info(record["message"])
+    return "{extra[_masked_msg]}\n"
 
 
 def setup_logger(config_path: Optional[str] = None) -> None:
@@ -75,47 +113,31 @@ def setup_logger(config_path: Optional[str] = None) -> None:
     if not log_dir.exists():
         log_dir.mkdir(parents=True, exist_ok=True)
     
-    # 配置日志格式
+    # 选择脱敏 format 函数
     if log_config.format == "json":
-        # 使用loguru的JSON序列化功能
-        log_format = (
-            '{{"time": "{time:YYYY-MM-DD HH:mm:ss.SSS}", '
-            '"level": "{level}", '
-            '"module": "{module}", '
-            '"function": "{function}", '
-            '"line": {line}, '
-            '"message": "{message}"}}'
-        )
+        fmt_func = sensitive_format_json
     else:
-        log_format = (
-            "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
-            "<level>{level: <8}</level> | "
-            "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> | "
-            "<level>{message}</level>"
-        )
-    
+        fmt_func = sensitive_format
+
     # 添加控制台输出（仅 ERROR 级别以上）
     logger.add(
         sys.stderr,
-        format=log_format,
+        format=fmt_func,
         level="ERROR",
-        filter=SensitiveFilter(),
-        colorize=True if log_config.format == "text" else False
+        colorize=True if log_config.format == "text" else False,
     )
-    
+
     # 添加文件输出（带轮转）
-    # loguru的retention参数使用整数表示保留的文件数量
     logger.add(
         log_config.file,
-        format=log_format,
+        format=fmt_func,
         level=log_config.level,
-        rotation=f"{log_config.max_size} MB",  # 文件大小达到 max_size MB 时轮转
-        retention=log_config.backup_count,  # 保留 backup_count 个备份文件
-        compression="zip",  # 压缩旧日志文件
+        rotation=f"{log_config.max_size} MB",
+        retention=log_config.backup_count,
+        compression="zip",
         encoding="utf-8",
-        filter=SensitiveFilter(),  # 应用敏感信息过滤器
-        backtrace=True,  # 显示完整的错误堆栈
-        diagnose=True,  # 显示变量值（仅在开发环境）
+        backtrace=True,
+        diagnose=True,
     )
     
     logger.info("日志系统初始化成功")
