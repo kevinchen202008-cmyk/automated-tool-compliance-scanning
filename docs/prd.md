@@ -1,8 +1,8 @@
 ---
 title: 工具合规扫描 Agent 服务 PRD
-version: 0.1.0
-status: draft
-date: 2026-02-06
+version: 0.6.0
+status: active
+date: 2026-02-12
 author: Product Manager (BMAD)
 ---
 
@@ -101,6 +101,8 @@ author: Product Manager (BMAD)
   - 基础性能/稳定性（performance，初期可以弱化）
   - TOS（服务条款）合规性（基于 TOS 信息分析结果）
 - FR-RULE-ENGINE-03：评分算法可在配置中调整权重
+
+> **当前实现说明（v0.6）**：多维评分（security / license / maintenance / performance / TOS）已在代码中保留完整结构，但默认通过 `compliance.enable_multi_dimension_assessment: false` 关闭。当前版本采用**简化模式**——以 TOS 分析 + 替代方案推荐为核心输出，不计算数值评分，以减少 AI 调用次数、加快扫描速度。详见 `docs/performance-optimization.md`。
 
 ### 4.4 部署与访问（FR-DEPLOY-ACCESS）
 - FR-DEPLOY-01：支持在本地 WSL 环境部署

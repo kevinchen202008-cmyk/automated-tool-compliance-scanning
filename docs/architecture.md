@@ -1,8 +1,8 @@
 ---
 title: 工具合规扫描 Agent 服务 架构设计
-version: 0.2.0
+version: 0.6.0
 status: aligned-with-implementation
-date: 2026-02-09
+date: 2026-02-12
 author: Architect (BMAD)
 # 阶段性交付归档: v0.5 技术架构见 docs/delivery/architecture-v0.5.md
 ---
@@ -140,14 +140,42 @@ author: Architect (BMAD)
 
 ---
 
-## 6. 技术选型（候选）
+## 6. 技术选型（当前实现）
 
-> 具体技术栈可在实现阶段由 Dev / Architect 进一步细化，这里给出初步建议。
+- **后端框架**：FastAPI 0.128 + Uvicorn（Python 3.10+）
+- **数据库**：SQLite（默认/开发）+ MySQL（云端扩展）
+- **ORM**：SQLAlchemy 2.0+，Pydantic v2 配置校验
+- **前端**：原生 HTML + JS SPA（`index.html` + 拆分的 JS 模块：`scan.js` / `kb-browse.js` / `utils.js`）
+- **AI 调用**：httpx，封装为 `ai_client.py`（支持 GLM / OpenAI / Azure / Local 多 provider）
+- **日志**：Loguru，支持敏感信息自动脱敏
+- **CI/CD**：GitHub Actions（测试 + 安全扫描 + Docker 构建 + 阿里云 ECS 部署）
+- **代码安全**：CodeQL（自动）+ bandit + pip-audit（CI 流水线）
 
-- 后端框架：FastAPI / Flask / Express.js（择一）
-- 数据库：SQLite（MVP）+ MySQL（云端扩展）
-- 前端：后端模板渲染 或 轻量级 SPA（如 Vue/React，视资源而定）
-- AI 调用：HTTP 客户端（requests / axios），封装为独立模块
+### 6.1 后端模块结构（v0.6）
+
+```
+src/
+├── main.py              # FastAPI 入口（lifespan 管理、路由注册）
+├── config.py            # 配置管理（Pydantic models）
+├── database.py          # 数据库引擎与会话管理
+├── models.py            # SQLAlchemy ORM 模型
+├── schemas.py           # Pydantic 请求/响应模型
+├── logger.py            # 日志系统（敏感信息脱敏）
+├── routers/             # API 路由模块
+│   ├── tools.py         # /api/v1/tools（工具管理）
+│   ├── scan.py          # /api/v1/scan, /api/v1/reports（扫描与报告）
+│   └── knowledge_base.py # /api/v1/knowledge-base（工具信息库）
+└── services/            # 业务逻辑层
+    ├── scan_service.py  # 扫描任务编排
+    ├── tos_service.py   # TOS 搜索与分析
+    ├── ai_client.py     # AI 多 provider 客户端
+    ├── compliance_engine.py # 合规引擎（多维评分，当前简化）
+    ├── report_service.py # 报告生成与导出
+    ├── knowledge_base_service.py # 工具信息库 CRUD
+    ├── kb_diff_service.py # 工具信息库差异对比
+    ├── tool_service.py  # 工具记录管理
+    └── tool_knowledge_base.py # 内置工具信息 + 合并逻辑
+```
 
 ---
 
@@ -159,8 +187,34 @@ author: Architect (BMAD)
 
 ---
 
-## 8. 后续演进方向
+## 8. CI/CD 流水线架构
 
+### 8.1 GitHub Actions 流水线（deploy-aliyun.yml）
+
+```
+push to main
+    └── check-secrets        # 检查是否误提交敏感文件
+          ├── test            # 71 个单元/集成测试 (pytest)
+          └── security-scan   # pip-audit 依赖漏洞 + bandit 代码安全
+                └── build-and-push-image  # Docker 构建 → 阿里云 ACR
+                      └── deploy-to-ecs   # SSH → docker compose up
+```
+
+### 8.2 Branch Protection
+
+- `main` 分支已配置保护规则：`check-secrets` / `test` / `security-scan` 必须全部通过
+- 禁止强制推送和删除分支
+
+### 8.3 CodeQL（codeql.yml）
+
+- 自动扫描 Python / JavaScript / Actions 代码安全问题
+- 每周定时扫描 + 每次 push/PR 触发
+
+---
+
+## 9. 后续演进方向
+
+- 启用多维合规评分（`enable_multi_dimension_assessment: true`），需优化 AI 调用性能
 - 将 `Scan Service` 与 `Compliance Engine` 拆分为独立微服务
 - 引入消息队列（如 RabbitMQ/Kafka）处理大规模扫描任务
 - 引入监控与告警系统（Prometheus + Grafana）

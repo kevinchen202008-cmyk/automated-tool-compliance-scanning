@@ -4,7 +4,7 @@
 # 服务配置
 service:
   name: "tool-compliance-scanning-agent"
-  version: "1.0.0"
+  version: "0.6.0"
   port: 8080
   host: "0.0.0.0"
   debug: false

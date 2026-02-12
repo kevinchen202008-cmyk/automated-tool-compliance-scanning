@@ -13,7 +13,7 @@
 
 ## 技术栈
 
-- **后端框架**: FastAPI (Python 3.10，兼容 3.9+)
+- **后端框架**: FastAPI 0.128 (Python 3.10+)
 - **数据库**: SQLite (MVP) + MySQL (云端扩展)
 - **AI 服务**: GLM 官方 Open API (默认)
 - **配置管理**: YAML + Pydantic
@@ -49,7 +49,8 @@
 │   ├── config-example.yaml  # 通用配置示例
 │   └── archive/             # 历史过程性文档（已归档）
 ├── .github/workflows/
-│   └── deploy-aliyun.yml    # CI/CD：测试 → 构建镜像 → 部署到阿里云 ECS
+│   ├── deploy-aliyun.yml    # CI/CD：密钥检查 → 测试+安全扫描 → 构建镜像 → 部署 ECS
+│   └── codeql.yml           # CodeQL 代码安全分析（自动）
 ├── Dockerfile               # Docker 镜像构建脚本
 ├── requirements.txt         # Python 依赖
 └── README.md                # 本文件
@@ -78,7 +79,7 @@ chmod +x run.sh
 
 **1. 环境要求**
 
-- Python 3.9 或 3.10（项目内提供 `.python-version`，可用 pyenv/uv 等对齐版本）
+- Python 3.10+（项目内提供 `.python-version`，可用 pyenv/uv 等对齐版本）
 - pip
 
 **2. 安装依赖**
@@ -140,8 +141,12 @@ python start_server.py
 
 - 阿里云部署：
   - 通过 `.github/workflows/deploy-aliyun.yml`，在 push 到 `main` 时：
-    - 构建 Docker 镜像并推送至阿里云 ACR；
-    - 使用 SSH 登录指定 ECS，执行 `docker compose pull && docker compose up -d` 实现自动滚动更新。
+    - **check-secrets**：检测是否误提交敏感文件；
+    - **test**：运行 71 个单元/集成测试；
+    - **security-scan**：pip-audit 依赖漏洞扫描 + bandit 代码安全扫描；
+    - **build-and-push-image**：构建 Docker 镜像并推送至阿里云 ACR；
+    - **deploy-to-ecs**：SSH 登录 ECS 执行 `docker compose pull && up -d` 滚动更新。
+  - `main` 分支已配置 Branch Protection，test / security-scan / check-secrets 必须全部通过。
   - 详细步骤与所需 Secrets / Variables 配置见 [`docs/deploy-aliyun.md`](./docs/deploy-aliyun.md)。
 
 ## 功能特性
@@ -180,11 +185,12 @@ python start_server.py
 
 - [产品需求文档](./docs/prd.md)
 - [架构设计文档](./docs/architecture.md)
-- [配置指南](./docs/config-guide.md)
+- [配置示例](./docs/config-example.yaml)
 - [阿里云部署指南](./docs/deploy-aliyun.md)
+- [合规扫描流程](./docs/compliance-scanning-process.md)
 - [可维护性分析](./docs/maintainability-analysis.md)
+- [交付自检](./docs/delivery-self-check.md)
 - [v0.5 架构交付文档](./docs/delivery/architecture-v0.5.md)
-- [Epics 和 Stories](./_bmad-output/planning-artifacts/epics.md)
 
 ## 许可证
 

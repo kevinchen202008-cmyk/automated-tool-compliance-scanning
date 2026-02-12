@@ -9,14 +9,14 @@ echo ==================================================
 
 where python >nul 2>nul
 if errorlevel 1 (
-    echo [错误] 未找到 Python，请先安装 Python 3.9 或 3.10。
+    echo [错误] 未找到 Python，请先安装 Python 3.10+。
     echo 建议: 从 https://www.python.org/downloads/ 安装并勾选 "Add Python to PATH"
     exit /b 1
 )
 
 for /f "tokens=2 delims=: " %%v in ('python -c "import sys; print(sys.version_info[0], sys.version_info[1])" 2^>nul') do set PY_MIN=%%v
-if "%PY_MIN%" lss "9" (
-    echo [错误] 需要 Python 3.9+，当前可能版本较低。
+if "%PY_MIN%" lss "10" (
+    echo [错误] 需要 Python 3.10+，当前可能版本较低。
     python --version
     exit /b 1
 )

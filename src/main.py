@@ -65,7 +65,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="工具合规扫描 Agent 服务",
     description="基于 AI 的工具合规扫描服务，支持工具合规性评估和报告生成",
-    version="0.1.0",
+    version="0.6.0",
     lifespan=lifespan,
 )
 
@@ -99,7 +99,7 @@ async def root():
     """根路径，返回服务信息"""
     return {
         "service": "工具合规扫描 Agent 服务",
-        "version": "0.1.0",
+        "version": "0.6.0",
         "status": "running",
         "description": "Tool Compliance Scanning Agent Service",
     }

@@ -7,13 +7,13 @@ echo "工具合规扫描 Agent - 一键运行"
 echo "=================================================="
 
 if ! command -v python3 &>/dev/null; then
-  echo "[错误] 未找到 python3，请先安装 Python 3.9+"
+  echo "[错误] 未找到 python3，请先安装 Python 3.10+"
   exit 1
 fi
 
 PY_VER=$(python3 -c 'import sys; print(sys.version_info[1])' 2>/dev/null || echo 0)
-if [ "$PY_VER" -lt 9 ]; then
-  echo "[错误] 需要 Python 3.9+"
+if [ "$PY_VER" -lt 10 ]; then
+  echo "[错误] 需要 Python 3.10+"
   python3 --version
   exit 1
 fi
