@@ -1,0 +1,27 @@
+# 工具合规扫描 Agent 服务 - Docker Compose 配置
+#
+# 使用方法：
+#   1. 复制 docs/config-example.yaml 为 config/config.yaml 并填入 AI API Key
+#   2. docker compose up -d
+#
+# 数据持久化：
+#   - config/  → 配置文件（config.yaml）
+#   - data/    → SQLite 数据库及备份（compliance.db, *.bak.*）
+#   - logs/    → 应用日志
+#
+# 容器/主机/服务重启均不会丢失数据，因为这三个目录通过 volume 映射到宿主机。
+
+services:
+  tool-compliance:
+    build: .
+    image: tool-compliance-scanning:latest
+    container_name: tool-compliance-scanning
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - CONFIG_PATH=/app/config/config.yaml
+    volumes:
+      - ./config:/app/config
+      - ./data:/app/data
+      - ./logs:/app/logs

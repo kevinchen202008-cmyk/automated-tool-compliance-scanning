@@ -69,6 +69,7 @@ config/config.local.yaml
 *.sqlite3
 data/*.db
 data/*.sqlite
+data/*.bak.*
 
 # Temporary files
 tmp/
