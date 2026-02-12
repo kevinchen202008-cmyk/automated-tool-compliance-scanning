@@ -50,8 +50,32 @@ jobs:
       - name: Run tests
         run: python -m pytest tests/ -v --tb=short
 
+  security-scan:
+    needs: check-secrets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Dependency vulnerability scan (pip-audit)
+        run: python -m pip_audit -r requirements.txt --desc on
+
+      - name: Code security scan (bandit)
+        run: |
+          # B104: 排除 "binding to all interfaces" 误报（服务需要监听 0.0.0.0）
+          python -m bandit -r src/ -ll -s B104 --format txt
+          echo "Bandit security scan passed."
+
   build-and-push-image:
-    needs: test
+    needs: [test, security-scan]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
