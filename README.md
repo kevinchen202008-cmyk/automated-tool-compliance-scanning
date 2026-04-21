@@ -1,197 +1,190 @@
-# 工具合规扫描 Agent 服务 (automated-tool-compliance-scanning)
+# 🤖 自动化工具合规扫描 Agent
 
-基于 BMAD 方法论构建的自动化工具合规扫描 Agent，支持「按工具名一键扫描」+「工具库浏览与维护」，并提供本地 / Docker / 阿里云 ECS 多种部署方式。
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white"/>
+  <img src="https://img.shields.io/badge/FastAPI-0.128-009688?style=for-the-badge&logo=fastapi&logoColor=white"/>
+  <img src="https://img.shields.io/badge/LLM-GLM%20%7C%20Claude%20%7C%20Gemini-blueviolet?style=for-the-badge"/>
+  <img src="https://img.shields.io/badge/Docker-ready-2496ED?style=for-the-badge&logo=docker&logoColor=white"/>
+  <img src="https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white"/>
+</p>
 
-## 项目概述
+<p align="center">
+  <b>基于 BMAD 方法论构建的企业级 AI Agent，一键完成第三方工具的合规风险扫描与报告生成</b>
+</p>
 
-本项目面向企业内部的工具合规管理场景，核心能力包括：
+---
 
-- 通过工具名称一键触发合规扫描（调用 GLM 等大模型解析 TOS / 协议说明）；
-- 生成包含许可证、公司信息、商用限制、替代方案等关键信息的合规报告；
-- 将高质量扫描结果沉淀到「工具库」，支持后续集中浏览、编辑、删除与导出；
-- 提供 Web 界面与 CI/CD 流水线，支持在阿里云 ECS 上自动部署与更新服务。
+## 🎯 项目背景
 
-## 技术栈
+企业在采购或使用第三方工具时，需要评估其许可证合规性、商用限制、数据安全条款等。传统方式依赖人工查阅文档，效率低、易遗漏。本项目通过 LLM Agent 自动化这一流程：
 
-- **后端框架**: FastAPI 0.128 (Python 3.10+)
-- **数据库**: SQLite (MVP) + MySQL (云端扩展)
-- **AI 服务**: GLM 官方 Open API (默认)
-- **配置管理**: YAML + Pydantic
-- **日志**: Loguru
+- ⏱ **效率提升**：从人工数小时 → AI 几十秒完成扫描
+- 📋 **标准化输出**：统一格式的合规报告，可导出存档
+- 🏢 **企业就绪**：支持工具库管理、CI/CD 集成、Docker 部署
 
-## 项目结构
+---
+
+## ✨ 核心功能
+
+| 功能 | 说明 |
+|------|------|
+| 🔍 **一键合规扫描** | 输入工具名称，AI 自动分析 TOS/协议，生成完整合规报告 |
+| 📊 **结构化报告** | 包含许可证类型、商用限制、数据条款、替代方案等关键字段 |
+| 🗃 **工具知识库** | 沉淀历史扫描结果，支持浏览、编辑、删除、导出 |
+| 🌐 **Web 界面** | 开箱即用的前端，无需额外配置 |
+| 🔄 **CI/CD 集成** | GitHub Actions 自动部署到阿里云 ECS |
+| 🐳 **Docker 支持** | 容器化部署，环境一致性保障 |
+
+---
+
+## 🖥 Demo
 
 ```
-.
-├── _bmad/                    # BMAD核心配置目录
-│   ├── _config/             # BMAD配置文件
-│   └── _memory/             # BMAD内存配置
-├── _bmad-output/            # BMAD输出目录
-│   ├── planning-artifacts/  # 规划产物（Git跟踪）
-│   └── implementation-artifacts/  # 实现产物
-├── src/                      # 源代码目录
-│   ├── __init__.py
-│   ├── main.py              # FastAPI 应用入口
-│   ├── routers/             # 按领域拆分的路由模块
-│   ├── services/            # 合规扫描、工具信息库、报告等业务服务
-│   └── static/              # 前端 Web UI（HTML + 拆分的 JS 模块）
-│       ├── index.html
-│       └── js/              # utils.js / scan.js / kb-browse.js
-├── tests/                    # 测试目录（含 API 接口、服务层单元测试）
-├── config/                   # 配置文件目录（运行时挂载）
-├── logs/                     # 日志目录（本地/容器挂载）
-├── data/                     # 数据存储目录（SQLite 等）
-├── docs/                     # 项目文档目录
-│   ├── prd.md               # 产品需求文档
-│   ├── architecture.md      # 当前架构设计文档
-│   ├── delivery/            # 阶段性交付文档（如 architecture-v0.5.md）
-│   ├── deploy-aliyun.md     # 阿里云部署指南（ACR + ECS + GitHub Actions）
-│   ├── config-example.yaml  # 通用配置示例
-│   └── archive/             # 历史过程性文档（已归档）
-├── .github/workflows/
-│   ├── deploy-aliyun.yml    # CI/CD：密钥检查 → 测试+安全扫描 → 构建镜像 → 部署 ECS
-│   └── codeql.yml           # CodeQL 代码安全分析（自动）
-├── Dockerfile               # Docker 镜像构建脚本
-├── requirements.txt         # Python 依赖
-└── README.md                # 本文件
+输入: "Slack"
+
+输出合规报告:
+  ✅ 许可证类型:    商业软件（免费层 + 付费层）
+  ⚠️  商用限制:     免费层功能受限，企业使用需付费订阅
+  🔐 数据条款:     数据存储于美国服务器，受 GDPR/CCPA 约束
+  🔄 替代方案:     飞书、钉钉、Mattermost（开源自托管）
+  📅 扫描时间:     2026-04-21 08:00:00
 ```
 
-## 快速开始（下载即可运行）
+---
+
+## 🚀 快速开始
 
 ### 方式一：一键运行（推荐）
 
-克隆项目后，在项目根目录执行：
+```bash
+git clone https://github.com/kevinchen202008-cmyk/automated-tool-compliance-scanning.git
+cd automated-tool-compliance-scanning
 
-**Windows：**
-```batch
+# Linux / macOS
+chmod +x run.sh && ./run.sh
+
+# Windows
 run.bat
 ```
 
-**Linux / macOS：**
+脚本自动完成：创建虚拟环境 → 安装依赖 → 复制配置模板 → 启动服务
+
+访问 http://localhost:8000 打开 Web 界面。
+
+### 方式二：Docker
+
 ```bash
-chmod +x run.sh
-./run.sh
+docker build -t tool-compliance-scanner .
+docker run -d \
+  -p 8000:8000 \
+  -v $(pwd)/config:/app/config \
+  -v $(pwd)/data:/app/data \
+  -v $(pwd)/logs:/app/logs \
+  tool-compliance-scanner
 ```
 
-脚本会自动：创建 Python 虚拟环境（venv）、安装依赖、若缺少则创建 `config`/`data`/`logs` 目录，并启动服务。首次运行若存在 `docs/config-example.yaml` 会复制为 `config/config.yaml`，请编辑该文件填入 **GLM API Key**（远程 GLM 配置保持不变即可）。
-
-### 方式二：手动安装
-
-**1. 环境要求**
-
-- Python 3.10+（项目内提供 `.python-version`，可用 pyenv/uv 等对齐版本）
-- pip
-
-**2. 安装依赖**
+### 方式三：手动安装
 
 ```bash
-python -m venv venv
-# Windows: venv\Scripts\activate
-# Linux/macOS: source venv/bin/activate
+python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-```
-
-**3. 配置**
-
-复制配置示例并修改（若仓库中有示例）：
-
-```bash
-mkdir -p config
 cp docs/config-example.yaml config/config.yaml
+# 编辑 config/config.yaml，填入 LLM API Key
+uvicorn src.main:app --host 0.0.0.0 --port 8000
 ```
 
-编辑 `config/config.yaml`，至少完成以下字段：
+---
 
-- `service.port`：本地 Web UI 端口，建议保持为 `8080`；
-- `ai.glm.api_key`：填写你的 GLM 官方 Open API Key；
-- `database.path`：本地可保持 `./data/compliance.db`，云环境建议改为 `"/data/compliance.db"`。
+## ⚙️ 配置
 
-**4. 运行服务**
+编辑 `config/config.yaml`：
 
-```bash
-python start_server.py
+```yaml
+llm:
+  provider: glm          # 支持: glm / claude / gemini
+  api_key: YOUR_API_KEY
+  model: glm-4-flash
+
+server:
+  host: 0.0.0.0
+  port: 8000
+
+database:
+  type: sqlite           # MVP 默认 SQLite，生产可切换 MySQL
+  path: data/compliance.db
 ```
 
-### 访问服务
+---
 
-- **Web UI**（无需认证）: 默认 `http://localhost:8080/ui`（可在 `config/config.yaml` → `service.port` 调整）  
-- **API 文档**: `http://localhost:<port>/docs`  
-- **健康检查**: `http://localhost:<port>/health`
+## 🏗 项目架构
 
-## Docker 与阿里云部署（摘要）
+```
+automated-tool-compliance-scanning/
+├── src/
+│   ├── main.py              # FastAPI 应用入口
+│   ├── routers/             # API 路由（scan / kb / report）
+│   ├── services/            # 核心业务逻辑
+│   │   ├── scanner.py       # LLM 驱动的合规扫描服务
+│   │   ├── kb_service.py    # 工具知识库 CRUD
+│   │   └── report.py        # 报告生成与导出
+│   └── static/              # Web 前端（HTML + JS）
+├── config/                  # 运行时配置
+├── docs/                    # 架构文档、部署指南、PRD
+├── tests/                   # 单元测试 + API 测试
+├── .github/workflows/       # CI/CD（部署 + CodeQL 安全扫描）
+├── Dockerfile
+└── requirements.txt
+```
 
-项目内置 Docker 支持与 CI/CD 流程：
+---
 
-- 使用根目录下 `Dockerfile` 构建镜像：
+## 📡 API 文档
 
-  ```bash
-  docker build -t tool-compliance-scanning:local .
-  ```
+启动后访问 http://localhost:8000/docs 查看完整 Swagger API 文档。
 
-- 本地使用 Docker 运行：
+| 接口 | 方法 | 说明 |
+|------|------|------|
+| `/api/scan` | POST | 触发工具合规扫描 |
+| `/api/kb` | GET | 获取工具知识库列表 |
+| `/api/kb/{id}` | GET/PUT/DELETE | 知识库条目管理 |
+| `/api/report/{id}` | GET | 获取扫描报告 |
 
-  ```bash
-  docker run --rm -p 8080:8080 ^
-    -v %cd%\config:/config ^
-    -v %cd%\data:/data ^
-    -v %cd%\logs:/logs ^
-    -e CONFIG_PATH=/config/config.yaml ^
-    tool-compliance-scanning:local
-  ```
+---
 
-- 阿里云部署：
-  - 通过 `.github/workflows/deploy-aliyun.yml`，在 push 到 `main` 时：
-    - **check-secrets**：检测是否误提交敏感文件；
-    - **test**：运行 71 个单元/集成测试；
-    - **security-scan**：pip-audit 依赖漏洞扫描 + bandit 代码安全扫描；
-    - **build-and-push-image**：构建 Docker 镜像并推送至阿里云 ACR；
-    - **deploy-to-ecs**：SSH 登录 ECS 执行 `docker compose pull && up -d` 滚动更新。
-  - `main` 分支已配置 Branch Protection，test / security-scan / check-secrets 必须全部通过。
-  - 详细步骤与所需 Secrets / Variables 配置见 [`docs/deploy-aliyun.md`](./docs/deploy-aliyun.md)。
+## 🛠 技术栈
 
-## 功能特性
+- **后端**：FastAPI 0.128 + Python 3.10+
+- **AI**：GLM / Claude / Gemini（可配置切换）
+- **数据库**：SQLite（MVP）→ MySQL（生产）
+- **日志**：Loguru
+- **配置**：YAML + Pydantic
+- **部署**：Docker + GitHub Actions + 阿里云 ECS
+- **安全**：CodeQL 自动安全扫描
 
-- ✅ **合规扫描**
-  - 按工具名称一键创建扫描任务，自动调用大模型解析 TOS/许可与使用说明；
-  - 生成包含许可证类型、公司信息、商用限制、替代方案等关键信息的 JSON 报告。
-- ✅ **工具库浏览与维护**
-  - 在 Web 界面中按名称、许可/协议类型筛选已入库工具；
-  - 查看/编辑工具的许可证、公司信息、数据使用、隐私策略、服务限制、风险点等字段；
-  - 支持一键从扫描结果「加入工具库」或「基于扫描结果更新工具库」；
-  - 支持导出当前过滤后的工具列表为 CSV，方便线下复核。
-- ✅ **配置与日志**
-  - 基于 YAML + Pydantic 的强类型配置，支持默认值与格式校验；
-  - 使用 Loguru 输出结构化日志，落盘到 `logs/`（容器内可挂载到 `/logs`），并自动轮转。
-- ✅ **部署支持**
-  - 支持本地 venv 运行、Docker 镜像、阿里云 ACR + ECS 自动部署；
-  - 镜像内预置 `config-example.yaml`，ECS 上可通过 `docker cp` 快速恢复示例配置。
+---
 
-## 开发与方法论
+## 🗺 Roadmap
 
-本项目采用 BMAD 方法论推进：
+- [x] v0.5 — 核心扫描功能 + Web UI + 工具知识库
+- [x] v1.0 — Docker 支持 + CI/CD + 阿里云 ECS 自动部署
+- [ ] v1.1 — 多 LLM 并行扫描 + 结果对比
+- [ ] v1.2 — 批量扫描 + 定时自动扫描
+- [ ] v2.0 — 企业级多租户 + 审批流程
 
-1. **分析阶段**：梳理企业工具合规场景、角色与数据流 ✅  
-2. **规划阶段**：编写 PRD、交互设计、用例与数据模型 ✅  
-3. **解决方案阶段**：完成 v0.5 / v0.6 架构与交付文档（见 `docs/delivery/`）✅  
-4. **实现阶段**：持续迭代合规扫描、工具库、部署与运维能力（进行中） ✅
+---
 
-## 安全须知
+## 🤝 Contributing
 
-> `config/config.yaml` 包含 GLM API Key 等敏感信息，**已在 `.gitignore` 中忽略，禁止提交到 Git**。  
-> CI 中含 `check-secrets` 步骤，若检测到误提交配置文件会自动中断流水线。  
-> 详见 [部署文档 § 安全](./docs/deploy-aliyun.md#8-安全禁止提交配置与密钥)。
+欢迎 Issue 和 PR！请查阅 [开发文档](docs/architecture.md) 了解架构设计。
 
-## 文档
+---
 
-- [产品需求文档](./docs/prd.md)
-- [架构设计文档](./docs/architecture.md)
-- [配置示例](./docs/config-example.yaml)
-- [阿里云部署指南](./docs/deploy-aliyun.md)
-- [合规扫描流程](./docs/compliance-scanning-process.md)
-- [可维护性分析](./docs/maintainability-analysis.md)
-- [交付自检](./docs/delivery-self-check.md)
-- [v0.5 架构交付文档](./docs/delivery/architecture-v0.5.md)
+## 📄 License
 
-## 许可证
+MIT License — 详见 [LICENSE](LICENSE)
 
-（待添加）
+---
+
+<p align="center">
+  Built with ❤️ using <a href="https://github.com/bmadcode/bmad-method">BMAD Methodology</a> + Claude Code
+</p>
